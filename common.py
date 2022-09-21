@@ -1,10 +1,3 @@
-import numpy as np
-
-from astropy.coordinates import SkyCoord
-from astropy.io import fits
-from reproject import reproject_from_healpix
-from astropy.utils.data import get_pkg_data_filename
-
 ##############################
 ## units: cm MHz g K | SNR: kpc yr
 # constants:
