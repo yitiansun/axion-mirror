@@ -1,7 +1,7 @@
 figure.figsize : 6, 4
 text.usetex : True
 
-font.size : 18
+font.size : 14
 font.family : serif
 font.serif  : cm
 
@@ -10,6 +10,6 @@ axes.labelsize : 18
 xtick.labelsize : 18
 ytick.labelsize : 18
 
-figure.dpi : 150
+figure.dpi : 120
 
 savefig.bbox : tight

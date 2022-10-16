@@ -1,34 +1,78 @@
+import jax.numpy as jnp
+from jax import jit, vmap
+
+import sys
+sys.path.append('..')
+from utils.units_constants import *
+
 ##############################
-## units: cm MHz g K | SNR: kpc yr
-# constants:
-kb = 1.38065e-28 # cm^2 MHz^2 g / K
-c0 = 29979.2 # cm MHz
-c0kpcyr = 0.000306601 # kpc/yr
-hbar = 1.05457e-33 # cm^2 MHz g
-
-# derived
-hour = 3.6e9 # MHz^-1
-GeV = 1.60218e-15 # cm^2 MHz^2 g
-invGeV = 1/GeV # cm^-2 MHz^-2 g^-1
-Jy = 1e-35 # MHz^2 g
-cmpkpc = 3.08568e21 # cm per kpc
-arcmin = 1/60 # deg
-
-# astrophysics
-Rs = 8.22 # kpc
-sigmad_over_c = 116/300000 # (km/s) / (km/s)
-
-# spectral analysis
+## spectral analysis
 fDelta = 0.721 # frequency domain cut associated with the above bandwidth (2.17)
 def dnu(nu): # MHz(MHz)
     return 2.17 * sigmad_over_c * nu
 
 
 ##############################
-## DM
-rsNFW = 16 # kpc
-def rhoNFW(r): # g/cm^3(kpc)
-    return 1/( (r/rsNFW)*(1+r/rsNFW)**2 ) * 9.653726724487642e-25
+## coordinates
+
+def GCstz(lbd):
+    """ Galactic center cylindrical coordinates (s, t, z) [L, rad, L] from Galactic coordinates with depth (l, b, d) [rad, rad, L]. Vectorized; batch dimension is the last dimension.
+    """
+    l, b, d = lbd
+    x = d * jnp.cos(b) * jnp.cos(l) - r_Sun
+    y = d * jnp.cos(b) * jnp.sin(l)
+    z = d * jnp.sin(b)
+    return jnp.array([ jnp.sqrt(x**2 + y**2),
+                       jnp.arctan2(y, x),
+                       z ])
+
+def Glbd(stz):
+    """ Galactic coordinates with depth (l, b, d) [rad, rad, L] from Galactic center cylindrical coordinates (s, t, z) [L, rad, L]. Vectorized; batch dimension is the last dimension.
+    """
+    s, t, z = stz
+    x = s * jnp.cos(t)
+    y = s * jnp.sin(t)
+    # z = z
+    return jnp.array([ jnp.arctan2(y, x+r_Sun),
+                       jnp.arctan2(z, jnp.sqrt((x+r_Sun)**2 + y**2)),
+                       jnp.sqrt((x+r_Sun)**2 + y**2 + z**2) ])
+
+def Gr(lbd):
+    """ Distance to galactic center r [kpc] as a function of Galactic coordinates with depth (l, b, d) [rad, rad, L]. Vectorized; batch dimension is the last dimension.
+    """
+    l, b, d = lbd
+    x = d * jnp.cos(b) * jnp.cos(l) - r_Sun
+    y = d * jnp.cos(b) * jnp.sin(l)
+    z = d * jnp.sin(b)
+    return jnp.sqrt(x**2 + y**2 + z**2)
+
+
+##############################
+## dark matter
+
+rs_NFW = 16 # [kpc]
+norm_NFW = 1/( (r_Sun/rs_NFW)*(1+r_Sun/rs_NFW)**2 )
+intg_ds = jnp.concatenate((jnp.linspace(0, 20, 200, endpoint=False),
+                           jnp.linspace(20, 200, 200, endpoint=False),
+                           jnp.linspace(200, 1000, 100, endpoint=True)))
+
+@jit
+def rho_NFW(r):
+    """ NFW halo density rho [GeV/cm^3] as a function of distance to galactic center r [kpc]. Vectorized. 
+    """
+    return 1/( (r/rs_NFW)*(1+r/rs_NFW)**2 ) / norm_NFW * 0.46
+
+@jit
+@vmap
+def rho_integral(lb):
+    """ NFW halo density integral [GeV kpc/cm^3] as a function of galactic coordinates (l, b) [rad, rad]. Vectorized; batch dimension is the first dimension.
+    """
+    l, b = lb
+    lbd = jnp.array([ jnp.full_like(intg_ds, l),
+                      jnp.full_like(intg_ds, b),
+                      intg_ds ])
+    rhos = rho_NFW(Gr(lbd))
+    return jnp.trapz(rhos, intg_ds)
 
 
 ##############################
