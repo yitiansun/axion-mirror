@@ -16,7 +16,9 @@ def dnu(nu): # MHz(MHz)
 ## coordinates
 
 def GCstz(lbd):
-    """ Galactic center cylindrical coordinates (s, t, z) [L, rad, L] from Galactic coordinates with depth (l, b, d) [rad, rad, L]. Vectorized; batch dimension is the last dimension.
+    """Galactic center cylindrical coordinates (s, t, z) [L, rad, L] from
+    Galactic coordinates with depth (l, b, d) [rad, rad, L]. Vectorized; batch
+    dimension is the last dimension.
     """
     l, b, d = lbd
     x = d * jnp.cos(b) * jnp.cos(l) - r_Sun
@@ -27,7 +29,9 @@ def GCstz(lbd):
                        z ])
 
 def Glbd(stz):
-    """ Galactic coordinates with depth (l, b, d) [rad, rad, L] from Galactic center cylindrical coordinates (s, t, z) [L, rad, L]. Vectorized; batch dimension is the last dimension.
+    """Galactic coordinates with depth (l, b, d) [rad, rad, L] from Galactic
+    center cylindrical coordinates (s, t, z) [L, rad, L]. Vectorized; batch
+    dimension is the last dimension.
     """
     s, t, z = stz
     x = s * jnp.cos(t)
@@ -38,13 +42,54 @@ def Glbd(stz):
                        jnp.sqrt((x+r_Sun)**2 + y**2 + z**2) ])
 
 def Gr(lbd):
-    """ Distance to galactic center r [kpc] as a function of Galactic coordinates with depth (l, b, d) [rad, rad, L]. Vectorized; batch dimension is the last dimension.
+    """Distance to galactic center r [kpc] as a function of Galactic coordinates
+    with depth (l, b, d) [rad, rad, L]. Vectorized; batch dimension is the last
+    dimension.
     """
     l, b, d = lbd
     x = d * jnp.cos(b) * jnp.cos(l) - r_Sun
     y = d * jnp.cos(b) * jnp.sin(l)
     z = d * jnp.sin(b)
     return jnp.sqrt(x**2 + y**2 + z**2)
+
+def norm(v_s):
+    """Norm of array of (xyz) vector"""
+    return jnp.sqrt(jnp.sum(v_s * v_s, axis=0))
+
+def unit_vec(v_s):
+    """Unit vectors of array of (xyz) vector"""
+    return v_s / norm(v_s)
+
+def cross_product(v1xyz, v2xyz):
+    v1x, v1y, v1z = v1xyz
+    v2x, v2y, v2z = v2xyz
+    return jnp.array([v1y*v2z - v2y*v1z,
+                      v1z*v2x - v2z*v1x,
+                      v1x*v2y - v2x*v1y])
+
+def GCxyz_stz(stz):
+    """Galactic center cartesian coordinates (x, y, z) [L, L, L] from Galactic
+    center cylindrical coordinates (s, t, z) [L, rad, L]. Vectorized; batch
+    dimension is the last dimension."""
+    s, t, z = stz
+    x = s * jnp.cos(t)
+    y = s * jnp.sin(t)
+    # z = z
+    return jnp.array([x, y, z])
+
+def los_direction(xyz):
+    """Line of sight direction (radially outward) of xyz coordinates, in xyz
+    coordinates. [kpc] Vectorized; batch dimension is the last dimension."""
+    x, dy, dz = xyz
+    dx = x + r_Sun
+    return unit_vec(jnp.array([dx, dy, dz]))
+
+def vstz2vxyz_stz(vsvtvz, stz):
+    vs, vt, vz = vsvtvz
+    s, t, z = stz
+    return jnp.array([vs*jnp.cos(t) - vt*jnp.sin(t),
+                      vs*jnp.sin(t) + vt*jnp.cos(t),
+                      vz])
 
 
 ##############################
@@ -74,6 +119,11 @@ def rho_integral(lb):
     rhos = rho_NFW(Gr(lbd))
     return jnp.trapz(rhos, intg_ds)
 
+rho_integral_ref = rho_NFW(r_Sun) * 10 # [GeV/cm^3] * [kpc] = [GeV kpc/cm^3]
+
+
+##############################
+## OLD code below!!!
 
 ##############################
 ## image
