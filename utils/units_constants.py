@@ -13,7 +13,7 @@ hour = 3.6e9 # [MHz^-1]
 GeV = 1.60218e-15 # [cm^2 MHz^2 g]
 invGeV = 1/GeV # [cm^-2 MHz^-2 g^-1]
 Jy = 1e-35 # [MHz^2 g]
-cmpkpc = 3.08568e21 # [1] | cm per kpc
+kpc = 3.08568e21 # [cm]
 deg = jnp.pi/180 # [rad]
 arcmin = deg/60 # [rad]
 
