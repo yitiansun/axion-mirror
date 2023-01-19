@@ -52,6 +52,7 @@ def plot_lb(z, figsize=(8, 4), log_norm=True, title='', **imshow_kwargs):
         ))
     default_kwargs.update(imshow_kwargs)
     im = ax.imshow(jnp.flip(z), **default_kwargs)
+    ax.set(aspect=1)
     ax.set(title=title, xlabel=r'$l$ [deg]', ylabel=r'$b$ [deg]')
     ax.set(xticks=jnp.linspace(180, -180, 7), yticks=jnp.linspace(-60, 60, 3))
     fig.colorbar(im, ax=ax, shrink=0.8)

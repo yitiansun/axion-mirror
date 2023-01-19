@@ -20,3 +20,6 @@ arcmin = deg/60 # [rad]
 # astrophysics
 r_Sun = 8.22 # [kpc]
 sigmad_over_c = 116/300000 # [1] | (km/s) / (km/s)
+
+# this project
+gagg_CAST = 6.6e-11 * invGeV # [cm^-2 MHz^-2 g^-1]
