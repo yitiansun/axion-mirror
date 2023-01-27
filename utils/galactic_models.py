@@ -1,4 +1,7 @@
+from functools import partial
+
 import jax.numpy as jnp
+from jax import vmap
 
 import sys
 sys.path.append('..')
@@ -8,11 +11,111 @@ from utils.units_constants import *
 # length: kpc
 # B field: muGauss
 
-####################
-## B field
+spec_ind_p = 3
+spec_ind_alpha = (spec_ind_p+1)/2
 
-def B_disk_ASR(stz_s):
-    """B_disk in Axi-symmetric spiral model + ring model (ASR) from NE2001.
+####################
+## JF: B field
+
+@partial(vmap, in_axes=(None, 0, 0, None))
+def is_in_arm(stz, r_nx_low, r_nx_high, tani):
+    
+    s, t, z = stz[:,0], stz[:,1], stz[:,2]
+    
+    s_nx = s / jnp.exp((t-jnp.pi)*tani)
+    in_arm_inner = jnp.logical_and(s_nx > r_nx_low, s_nx < r_nx_high)
+    in_arm_outer = jnp.logical_and(s_nx > r_nx_low * jnp.exp(2*jnp.pi*tani),
+                                   s_nx < r_nx_high * jnp.exp(2*jnp.pi*tani))
+    in_s_bound = jnp.logical_and(s > 5, s < 20)
+    return jnp.logical_and(jnp.logical_or(in_arm_inner, in_arm_outer), in_s_bound)
+
+def logistic(z, h, w):
+    return 1 / (1 + jnp.exp(-2*(jnp.abs(z)-h)/w))
+
+def B_JF(stz):
+    """B field model described in 1204.3662.
+    B (stz vector field) ([muG], [muG], [muG]) as a function of stz ([kpc],
+    [rad], [kpc]). Vectorized manually; batch dimension is the first.
+    """
+    s, t, z = stz[:,0], stz[:,1], stz[:,2]
+    batchsize = stz.shape[0]
+    
+    ## disk
+    i_angle = jnp.deg2rad(11.5)
+    b_ring = 0.1 # [muG]
+    b_arms = jnp.array([0.1, 3.0, -0.9, -0.8, -2.0, -4.2, 0.0, 2.7]) # [muG]
+    r_nx_s = jnp.array([5.1, 6.3, 7.1, 8.3, 9.8, 11.4, 12.7, 15.5, 18.31]) # [kpc]
+    h_disk = 0.4 # [kpc]
+    w_disk = 0.27 # [kpc]
+    
+    # disk: inner
+    frac_disk = 1 - logistic(z, h_disk, w_disk)
+    B_inner_t = jnp.where(s < 5, b_ring, 0) * frac_disk
+    
+    # disk: arms
+    is_in_arm_arr = is_in_arm(stz, r_nx_s[:-1], r_nx_s[1:], jnp.tan(i_angle))
+    B_arms_5kpc = jnp.dot(b_arms, is_in_arm_arr) * frac_disk
+    B_arms_s = jnp.sin(i_angle) * B_arms_5kpc * (5/s)
+    B_arms_t = jnp.cos(i_angle) * B_arms_5kpc * (5/s)
+    
+    ## toroidal halo
+    B_n, B_s = 1.4, -1.1 # [muG]
+    r_n, r_s = 9.22, 16.7 # [kpc]
+    w_h = 0.2 # [kpc]
+    z_0 = 5.3 # [kpc]
+    B_halo_t = jnp.exp(-jnp.abs(z)/z_0) * (1-frac_disk) * jnp.where( z > 0,
+        B_n * (1 - logistic(s, r_n, w_h)),
+        B_s * (1 - logistic(s, r_s, w_h)),
+    )
+    
+    ## X halo
+    B_X = 4.6 # [muG]
+    Theta_0X = jnp.deg2rad(49)
+    r_cX = 4.8 # [kpc]
+    r_X = 2.9 # [kpc]
+    
+    # X halo: constant region
+    rp_const = jnp.clip(s - jnp.abs(z) / jnp.tan(Theta_0X), 0, None)
+    B_X_const_mag = B_X * jnp.exp(-rp_const/r_X) * (rp_const/s) * (s >= r_cX)
+    B_X_const_s = B_X_const_mag * jnp.cos(Theta_0X) * jnp.sign(z)
+    B_X_const_z = B_X_const_mag * jnp.sin(Theta_0X)
+    
+    # X halo: linear region
+    rp_lin = s * r_cX / (r_cX + jnp.abs(z)/jnp.tan(Theta_0X))
+    Theta_X = jnp.arctan(jnp.abs(z) / (s - rp_lin + 1e-5))
+    B_X_lin_mag = B_X * jnp.exp(-rp_lin/r_X) * (rp_lin/s)**2 * (s < r_cX)
+    B_X_lin_s = B_X_lin_mag * jnp.cos(Theta_X) * jnp.sign(z)
+    B_X_lin_z = B_X_lin_mag * jnp.sin(Theta_X)
+    
+    return jnp.stack([B_arms_s + B_X_const_s + B_X_lin_s,
+                      B_inner_t + B_arms_t + B_halo_t,
+                      B_X_const_z + B_X_lin_z], axis=-1)
+
+####################
+## JF: n_e
+def n_e_WMAP(stz):
+    """Electron density model from JF (WMAP).
+    n_e [unnormalized] as a function of stz ([kpc], [rad], [kpc]). Vectorized
+    manually; batch dimension is the first."""
+    s, t, z = stz[:,0], stz[:,1], stz[:,2]
+    hr = 5 # [kpc]
+    hz = 1 # [kpc]
+    return jnp.exp(-s/hr) * jnp.cosh(z/hz)**(-2)
+
+
+####################
+## SRWE: B field
+
+def B_SRWE_AH(stz_s):
+    return B_SRWE_disk_ASR(stz_s) + B_SRWE_halo(stz_s)
+
+
+def B_SRWE_BH(stz_s):
+    return B_SRWE_disk_BS(stz_s) + B_SRWE_halo(stz_s)
+
+
+def B_SRWE_disk_ASR(stz_s):
+    """B_disk in Axi-symmetric spiral model + ring model (ASR) from 0711.1572.
     B (stz vector field) ([muG], [muG], [muG]) as a function of stz ([kpc],
     [rad], [kpc]). Vectorized manually; batch dimension is the first.
     """
@@ -29,8 +132,8 @@ def B_disk_ASR(stz_s):
                       BDt_s,
                       jnp.zeros_like(BDt_s)], axis=-1)
 
-def B_disk_BS(stz_s):
-    """B_disk in Bi-symmetric spiral model (BS) from NE2001.
+def B_SRWE_disk_BS(stz_s):
+    """B_disk in Bi-symmetric spiral model (BS) from 0711.1572.
     B (stz vector field) ([muG], [muG], [muG]) as a function of stz ([kpc],
     [rad], [kpc]). Vectorized manually; batch dimension is the first.
     """
@@ -48,8 +151,8 @@ def B_disk_BS(stz_s):
                       -D1D2_s*jnp.cos(p_s),
                       jnp.zeros_like(D1D2_s)], axis=-1)
 
-def B_halo(stz_s):
-    """B_halo model from NE2001.
+def B_SRWE_halo(stz_s):
+    """B_halo model from 0711.1572.
     B (stz vector field) ([muG], [muG], [muG]) as a function of stz ([kpc],
     [rad], [kpc]). Vectorized manually; batch dimension is the first.
     """
@@ -61,12 +164,9 @@ def B_halo(stz_s):
                       jnp.zeros_like(zH1_s)], axis=-1)
 
 ####################
-## electron density
+## SRWE: n_e
 
-spec_ind_p = 3
-spec_ind_alpha = (spec_ind_p+1)/2
-
-def n_e(stz_s): # [unnorm] ( [[kpc], [1], [kpc]] ), vectorized
+def n_e_SRWE(stz_s): # [unnorm] ( [[kpc], [1], [kpc]] ), vectorized
     """Electron density model from NE2001.
     n_e [unnormalized] as a function of stz ([kpc], [rad], [kpc]). Vectorized
     manually; batch dimension is the first.

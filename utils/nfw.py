@@ -12,9 +12,7 @@ from utils.geometry import Gr
 ####################
 ## constants
 
-rs_NFW = 16 # [kpc]
 rho_r_Sun = 0.46 * GeV / c0**2 # [g/cm^3]
-norm_NFW = 1 / ( (r_Sun/rs_NFW) * (1+r_Sun/rs_NFW)**2 )
 intg_d_s = jnp.concatenate((jnp.linspace(0, 20, 200, endpoint=False), # [kpc]
                             jnp.linspace(20, 200, 200, endpoint=False),
                             jnp.linspace(200, 1000, 100, endpoint=True)))
@@ -22,12 +20,14 @@ intg_d_s = jnp.concatenate((jnp.linspace(0, 20, 200, endpoint=False), # [kpc]
 ####################
 ## functions
 
-@jit
-def rho_NFW(r):
-    """NFW halo density rho [g/cm^3] as a function of distance to galactic
-    center r [kpc]. Vectorized manually.
+def rho_NFW(r, gamma=1., r_s=16.):
+    """Generalized NFW halo density rho [g/cm^3] as a function of distance to
+    galactic center r [kpc], gamma [1], and scale radius r_s [kpc]. Vectorized
+    manually (first entry).
     """
-    return rho_r_Sun / ( (r/rs_NFW)*(1+r/rs_NFW)**2 ) / norm_NFW
+    rho_unnorm = (r/r_s)**(-gamma) * (1 + r/r_s)**(-3+gamma)
+    rho_unnorm_Sun = (r_Sun/r_s)**(-gamma) * (1 + r_Sun/r_s)**(-3+gamma)
+    return (rho_r_Sun/rho_unnorm_Sun) * rho_unnorm
 
 rho_integral_ref_length = 10 * kpc # [cm]
 rho_integral_ref = rho_NFW(r_Sun) * rho_integral_ref_length # [g/cm^3] [cm] = [g/cm^2]

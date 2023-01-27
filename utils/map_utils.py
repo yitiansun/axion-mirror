@@ -59,8 +59,8 @@ def plot_lb(z, figsize=(8, 4), log_norm=True, title='', **imshow_kwargs):
     plt.show()
 
 
-def plot_hv(func, smax=None, h_zval=None, zmax=None, v_tval=None, npix=None,
-            title=''):
+def plot_hv(func, smax=None, h_zval=0, zmax=None, v_tval=0, npix=None,
+            title='', symm_color=False):
     
     x_s = jnp.linspace(-smax, smax, npix)
     y_s = jnp.linspace(-smax, smax, npix)
@@ -87,9 +87,17 @@ def plot_hv(func, smax=None, h_zval=None, zmax=None, v_tval=None, npix=None,
     fig, axs = plt.subplots(1, 2, figsize=(12,6))
 
     vmax = jnp.max(jnp.array([jnp.max(hslice[hslice<jnp.inf]), jnp.max(vslice[vslice<jnp.inf])]))
-    im = axs[0].imshow(hslice, extent=(-smax, smax, -smax, smax), vmin=0, vmax=vmax, cmap='magma')
-    axs[1].imshow(vslice, extent=(0, smax, -zmax, zmax), vmin=0, vmax=vmax, cmap='magma')
+    vmin = jnp.min(jnp.array([jnp.min(hslice[hslice<jnp.inf]), jnp.min(vslice[vslice<jnp.inf])]))
+    if symm_color:
+        vabs = jnp.max(jnp.array([jnp.abs(vmax), jnp.abs(vmin)]))
+        kwargs = dict(vmin=-vabs, vmax=vabs, cmap='coolwarm')
+    else:
+        kwargs = dict(vmin=0, vmax=vmax, cmap='magma')
+    
+    im = axs[0].imshow(jnp.flipud(hslice), extent=(-smax, smax, -smax, smax), **kwargs)
+    axs[1].imshow(jnp.flipud(jnp.array(vslice)), extent=(0, smax, -zmax, zmax), **kwargs)
+    
     axs[0].set(xlabel='x [kpc]', ylabel='y [kpc]', title=title+f'$z={h_zval}$~kpc')
-    axs[1].set(xlabel='x [kpc]', ylabel='z [kpc]', title=title+f'$\phi={v_tval}^\circ$')
+    axs[1].set(xlabel='x [kpc]', ylabel='z [kpc]', title=title+f'$\phi={jnp.rad2deg(v_tval)}^\circ$')
     fig.colorbar(im, ax=axs, orientation='horizontal', aspect=40)
     plt.show()
