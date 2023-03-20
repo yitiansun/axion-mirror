@@ -1,5 +1,6 @@
 import numpy as np
 import jax.numpy as jnp
+from jax import jit, vmap
 from scipy import interpolate
 
 import matplotlib as mpl
@@ -34,9 +35,92 @@ def padded_interpolator(l, b, m):
     
     return interpolate.interp2d(padded_l, padded_b, padded_m)
 
+def interp2d(f, x0, x1, xv):
+    """Interpolates f(x) at values in xvs. Does not do bound checks.
+    f : (n>=2 D) array of function value.
+    x0 : 1D array of input value, corresponding to first dimension of f.
+    x1 : 1D array of input value, corresponding to second dimension of f.
+    xv : [x0, x1] values to interpolate.
+    """
+    xv0, xv1 = xv
+    
+    li0 = jnp.searchsorted(x0, xv0) - 1
+    lx0 = x0[li0]
+    rx0 = x0[li0+1]
+    p0 = (xv0-lx0) / (rx0-lx0)
+    
+    li1 = jnp.searchsorted(x1, xv1) - 1
+    lx1 = x1[li1]
+    rx1 = x1[li1+1]
+    p1 = (xv1-lx1) / (rx1-lx1)
+    
+    fll = f[li0,li1]
+    return fll + (f[li0+1,li1]-fll)*p0 + (f[li0,li1+1]-fll)*p1
+
+interp2d_vmap = jit(vmap(interp2d, in_axes=(None, None, None, 0)))
+
+def interpolate_padded(m, l, b, lb_s):
+    
+    padded_b = np.zeros((len(b)+2,))
+    padded_b[1:-1] = b
+    padded_b[0] = b[0] - (b[1]-b[0])
+    padded_b[-1] = b[-1] + (b[-1]-b[-2])
+    
+    padded_l = np.zeros((len(l)+2,))
+    padded_l[1:-1] = l
+    padded_l[0] = l[0] - (l[1]-l[0])
+    padded_l[-1] = l[-1] + (l[-1]-l[-2])
+    
+    padded_m = np.zeros((len(b)+2,len(l)+2))
+    padded_m[1:-1, 1:-1] = m
+    padded_m[0,1:-1] = m[-1]
+    padded_m[-1,1:-1] = m[0]
+    padded_m[:,0] = padded_m[:,-2]
+    padded_m[:,-1] = padded_m[:,1]
+    
+    return interp2d_vmap(
+        jnp.asarray(padded_m),
+        jnp.asarray(padded_l),
+        jnp.asarray(padded_b),
+        lb_s
+    )
+
 
 ####################
 ## plotting
+
+def plot_radec(z, extent=None, vmax=None, vmin=None, log_norm=True, figsize=(8, 5), title='',
+               save_fn=None, **imshow_kwargs):
+    
+    if vmax is None:
+        vmax = jnp.max(z)
+    if vmin is None:
+        vmin = jnp.min(z)
+    if log_norm:
+        norm = mpl.colors.LogNorm(vmin, vmax)
+    else:
+        norm = mpl.colors.Normalize(vmin, vmax)
+        
+    default_kwargs = dict(
+        extent = extent,
+        cmap = 'magma',
+        norm = norm,
+    )
+    default_kwargs.update(imshow_kwargs)
+    
+    fig, ax = plt.subplots(figsize=figsize)
+    im = ax.imshow(jnp.flip(z), **default_kwargs)
+    ax.set(aspect=1)
+    ax.set(title=title, xlabel=r'ra [deg]', ylabel=r'dec [deg] (not uniform)')
+    ax.set(xticks=jnp.linspace(extent[0], extent[1], 7),
+           yticks=jnp.linspace(extent[2], extent[3], 2))
+    fig.colorbar(im, ax=ax, shrink=0.8, orientation='horizontal', aspect=40)
+    if save_fn is None:
+        plt.show()
+    else:
+        plt.savefig(save_fn)
+        #plt.close()
+        print(f'Plot saved: {save_fn}')
 
 def plot_lb(z, figsize=(8, 4), log_norm=True, title='', **imshow_kwargs):
     

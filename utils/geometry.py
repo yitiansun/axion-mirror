@@ -1,8 +1,12 @@
+import sys
+sys.path.append('..')
+
 import jax.numpy as jnp
 from jax import jit, vmap
 
-import sys
-sys.path.append('..')
+from astropy.coordinates import SkyCoord
+from astropy import units as u
+
 from utils.units_constants import *
 
 
@@ -96,3 +100,37 @@ def vstz2vxyz_stz(vstz, stz):
     return jnp.stack([vs*jnp.cos(t) - vt*jnp.sin(t),
                       vs*jnp.sin(t) + vt*jnp.cos(t),
                       vz], axis=-1)
+
+
+c_NGP = SkyCoord(l=0*u.deg, b=90*u.deg, frame='galactic') # north galactic pole
+c_NCP = SkyCoord(ra=0*u.deg, dec=90*u.deg, frame='icrs') # north celestial pole
+
+ra_NGP  = float(c_NGP.icrs.ra/u.rad)
+dec_NGP = float(c_NGP.icrs.dec/u.rad)
+l_NCP = float(c_NCP.galactic.l/u.rad)
+b_NCP = float(c_NCP.galactic.b/u.rad)
+
+EPSILON = 1e-30
+
+
+def lb2radec(lb):
+    """Equatorial coordinates (ra, dec) [rad, rad] from galactic coordinates
+    (l, b) [rad, rad]. Vectorized manually; batch dimension is the first
+    dimension.
+    """
+    l, b = lb[:,0], lb[:,1]
+    dec = jnp.arcsin( jnp.sin(dec_NGP)*jnp.sin(b) 
+                      + jnp.cos(dec_NGP)*jnp.cos(b)*jnp.cos(l_NCP-l) )
+    ra = jnp.arcsin( jnp.cos(b)*jnp.sin(l_NCP-l)/(jnp.cos(dec)+EPSILON) ) + ra_NGP
+    return jnp.stack([ra, dec], axis=-1)
+
+def radec2lb(radec):
+    """Galactic coordinates (l, b) [rad, rad] from equatorial coordinates
+    (ra, dec) [rad, rad]. Vectorized manually; batch dimension is the first
+    dimension.
+    """
+    ra, dec = radec[:,0], radec[:,1]
+    b = jnp.arcsin( jnp.sin(dec_NGP)*jnp.sin(dec) 
+                    + jnp.cos(dec_NGP)*jnp.cos(dec)*jnp.cos(ra-ra_NGP) )
+    l = - jnp.arcsin( jnp.cos(dec)*jnp.sin(ra-ra_NGP)/(jnp.cos(b)+EPSILON) ) + l_NCP
+    return jnp.stack([l, b], axis=-1)
