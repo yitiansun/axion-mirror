@@ -7,33 +7,56 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 ####################
+## map pixels
+
+def grid_edges(pixel_size_func, a_min, a_max, a_mid=0.):
+    
+    grid_edges = [a_mid]
+    a = a_mid
+    a += pixel_size_func(a)
+    while a < a_max:
+        grid_edges.append(a)
+        a += pixel_size_func(a)
+    grid_edges.append(a_max)
+    
+    a = a_mid
+    a -= pixel_size_func(a)
+    while a > a_min:
+        grid_edges.insert(0, a)
+        a -= pixel_size_func(a)
+    grid_edges.insert(0, a_min)
+    
+    return grid_edges
+
+
+####################
 ## map functions
 
-def antipodal_lb_map(lb_map):
-    """Antipodal map of a lb_map with dimensions (~b, ~l)."""
-    assert lb_map.shape[1] % 2 == 0
-    return jnp.roll(jnp.flipud(lb_map), int(lb_map.shape[1]/2), axis=1)
+# def antipodal_lb_map(lb_map):
+#     """Antipodal map of a lb_map with dimensions (~b, ~l)."""
+#     assert lb_map.shape[1] % 2 == 0
+#     return jnp.roll(jnp.flipud(lb_map), int(lb_map.shape[1]/2), axis=1)
 
-def padded_interpolator(l, b, m):
-    """Interpolator used to upsample l, b maps."""
-    padded_b = np.zeros((len(b)+2,))
-    padded_b[1:-1] = b
-    padded_b[0] = b[0] - (b[1]-b[0])
-    padded_b[-1] = b[-1] + (b[-1]-b[-2])
+# def padded_interpolator(l, b, m):
+#     """Interpolator used to upsample l, b maps."""
+#     padded_b = np.zeros((len(b)+2,))
+#     padded_b[1:-1] = b
+#     padded_b[0] = b[0] - (b[1]-b[0])
+#     padded_b[-1] = b[-1] + (b[-1]-b[-2])
     
-    padded_l = np.zeros((len(l)+2,))
-    padded_l[1:-1] = l
-    padded_l[0] = l[0] - (l[1]-l[0])
-    padded_l[-1] = l[-1] + (l[-1]-l[-2])
+#     padded_l = np.zeros((len(l)+2,))
+#     padded_l[1:-1] = l
+#     padded_l[0] = l[0] - (l[1]-l[0])
+#     padded_l[-1] = l[-1] + (l[-1]-l[-2])
     
-    padded_m = np.zeros((len(b)+2,len(l)+2))
-    padded_m[1:-1, 1:-1] = m
-    padded_m[0,1:-1] = m[-1]
-    padded_m[-1,1:-1] = m[0]
-    padded_m[:,0] = padded_m[:,-2]
-    padded_m[:,-1] = padded_m[:,1]
+#     padded_m = np.zeros((len(b)+2,len(l)+2))
+#     padded_m[1:-1, 1:-1] = m
+#     padded_m[0,1:-1] = m[-1]
+#     padded_m[-1,1:-1] = m[0]
+#     padded_m[:,0] = padded_m[:,-2]
+#     padded_m[:,-1] = padded_m[:,1]
     
-    return interpolate.interp2d(padded_l, padded_b, padded_m)
+#     return interpolate.interp2d(padded_l, padded_b, padded_m)
 
 def interp2d(f, x0, x1, xv):
     """Interpolates f(x) at values in xvs. Does not do bound checks.
@@ -122,6 +145,7 @@ def plot_radec(z, extent=None, vmax=None, vmin=None, log_norm=True, figsize=(8, 
         #plt.close()
         print(f'Plot saved: {save_fn}')
 
+        
 def plot_lb(z, figsize=(8, 4), log_norm=True, title='', **imshow_kwargs):
     
     fig, ax = plt.subplots(figsize=figsize)
