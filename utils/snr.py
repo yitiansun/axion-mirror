@@ -117,6 +117,8 @@ class SNR:
         
         self.l = l # [rad] | galactic longitude
         self.b = b # [rad] | galactic latitude
+        if self.l == 0 and self.b == 0:
+            self.b = np.deg2rad(0.1)
         self.size = size # [rad] | size estimate
         self.d = d # [kpc] | distance estimate
         
@@ -128,9 +130,9 @@ class SNR:
         
         self.snrcat_dict = snrcat_dict
         
-    def build(self, rho_DM=None):
-        """Build dependent properties. rho_DM should be a function like rho_NFW.
-        """
+    def build(self, rho_DM=None, tiop='2'):
+        
+        #========== variables ==========
         self.cl = self.l + np.pi - 2*np.pi*int(self.l>=np.pi) # [rad] | countersource l | [-pi,pi)
         self.cb = - self.b # [rad] | countersource b
         self.coord = SkyCoord(l=self.l, b=self.b, frame='galactic', unit='rad')
@@ -144,6 +146,7 @@ class SNR:
         self.ti1 = -2*(self.p+1)/5
         self.ti2 = -4*self.p/5
         
+        #========== Snu ==========
         def Snu(nu):
             """Speciic flux [Jy] as a function of frequency nu [MHz]. nu can be
             a vector.
@@ -151,12 +154,11 @@ class SNR:
             return self.Snu1GHz * (nu/1000)**(-self.si)
         self.Snu = Snu
         
-        def Snu_t_fl(nu, t, tiop='1'):
+        ti = self.ti1 if tiop=='1' else self.ti2
+        def Snu_t_fl(nu, t):
             """Snu: constant --t_MFA--> t^ti. Doesn't care about t_free.
             units: [Jy]([MHz], [yr], ..).
             """
-            ti = self.ti1 if tiop=='1' else self.ti2
-            
             if t < 0:
                 return 0.
             elif t > self.t_MFA:
@@ -165,37 +167,34 @@ class SNR:
                 return self.Snu(nu) * (self.t_MFA/self.t_now)**ti
         self.Snu_t_fl = Snu_t_fl
         
-        # gegenschein
+        #========== gegenschein ==========
         nu_ref = 1000 # [MHz]
-        intgd = lambda xp: self.Snu_t_fl(nu_ref, self.t(xp), tiop='2') \
-                           * rho_DM(np.maximum(self.Gr(xp), 0.01)) * kpc
-        # converted intgd*dx from [Jy g/cm^3 kpc] to [Jy g/cm^3 cm] to bring
-        # numerical value closer to 1
+        intgd = lambda xp: self.Snu_t_fl(nu_ref, self.t(xp)) * rho_DM(np.maximum(self.Gr(xp), 0.01)) * kpc # converted intgd*dx from [Jy g/cm^3 kpc] to [Jy g/cm^3 cm] to bring numerical value closer to 1
         intg, err = integrate.quad(intgd, 0, self.xp(0)) # [Jy g/cm^2]
         self.Sgnu_ref = prefac(nu_ref) * intg # = [g^-1 cm^2] [Jy g cm^-2] = [Jy]
-        def Sgnu(nu):
-            """Total specific gegenschein flux of the SNR [Jy] as a function of
-            frequency nu [MHz]. nu can be a vector.
-            """
+        def Sgnu(nu): # [Jy]([MHz])
             return self.Sgnu_ref * (prefac(nu)/prefac(nu_ref)) * (self.Snu(nu)/self.Snu1GHz)
         self.Sgnu = Sgnu
         
-        # front gegenschein
+        imsz_intgd = lambda xp: self.image_sigma_at(xp) * self.Snu_t_fl(nu_ref, self.t(xp)) * rho_DM(self.Gr(xp)) * kpc
+        imsz_intg, err = integrate.quad(imsz_intgd, 0, self.xp(0))
+        self.image_sigma = imsz_intg/intg # [arcmin]
+        
+        #========== front gegenschein ==========
         nu_ref = 1000 # [MHz]
-        intgd = lambda xp: self.Snu_t_fl(nu_ref, self.t_fg(xp), tiop='2') \
-                           * rho_DM(np.maximum(self.Gr_fg(xp), 0.01)) * kpc
-        # converted intgd*dx from [Jy g/cm^3 kpc] to [Jy g/cm^3 cm] to bring
-        # numerical value closer to 1
+        intgd = lambda xp: self.Snu_t_fl(nu_ref, self.t_fg(xp)) * rho_DM(np.maximum(self.Gr_fg(xp), 0.01)) * kpc # converted intgd*dx from [Jy g/cm^3 kpc] to [Jy g/cm^3 cm] to bring numerical value closer to 1
         intg, err = integrate.quad(intgd, self.d, self.xp_fg(0)) # [Jy g/cm^2]
-        if np.isinf(intg):
-            raise ValueError('integral diverges')
         self.Sfgnu_ref = prefac(nu_ref) * intg # = [g^-1 cm^2] [Jy g cm^-2] = [Jy]
-        def Sfgnu(nu):
-            """Total specific front gegenschein flux of the SNR [Jy] as a function of
-            frequency nu [MHz]. nu can be a vector.
-            """
+        def Sfgnu(nu): # [Jy]([MHz])
             return self.Sfgnu_ref * (prefac(nu)/prefac(nu_ref)) * (self.Snu(nu)/self.Snu1GHz)
         self.Sfgnu = Sfgnu
+        
+        imsz_intgd = lambda xp: self.image_sigma_at_fg(xp) * self.Snu_t_fl(nu_ref, self.t_fg(xp)) * rho_DM(self.Gr_fg(xp)) * kpc
+        imsz_intg, err = integrate.quad(imsz_intgd, self.d, self.xp_fg(0))
+        self.image_sigma_fg = imsz_intg/intg # [arcmin]
+        if np.isnan(imsz_intg):
+            raise ValueError(f'{self.ID} image_sigma_fg')
+        
         
     def name(self):
         """Returns name_alt or ID if name_alt is not present."""
