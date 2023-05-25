@@ -1,18 +1,1 @@
-# axion_gegenschein
-
-1. [ ] CHIME estimate cartesian pipeline
-    1. [X] CHIME map coordinates
-    1. [X] DM integral map
-    1. [X] Gegenschein map
-    1. [X] Exposure
-    1. [X] Signal/Noise & naive frequency dependence
-    1. [X] Add SNR's
-    1. [ ] Think more about frequency dependence
-1. [ ] 3D synchrotron radiation update
-    1. [X] Clean up jax functions
-    1. [X] Clean up and apply old magnetic field models
-    1. [ ] Add new magnetic field models
-1. [ ] HERA estimates ...
-
-Questions:
-- cartesian map's varying pixel area
+# Axions against the world

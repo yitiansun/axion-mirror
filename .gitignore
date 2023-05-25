@@ -1,6 +1,9 @@
-# This project
+#===== This project =====
 test/
 **/.DS_Store
+.tmp.driveupload/
+data/CHIME_estimate_intermediates/
+#========================
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
