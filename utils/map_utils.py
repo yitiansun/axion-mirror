@@ -146,7 +146,7 @@ def plot_radec(z, extent=None, vmax=None, vmin=None, log_norm=True, figsize=(8, 
         print(f'Plot saved: {save_fn}')
 
         
-def plot_lb(z, figsize=(8, 4), log_norm=True, title='', **imshow_kwargs):
+def plot_lb(z, figsize=(8, 4), log_norm=True, title='', log_norm_max=None, log_norm_min=None, **imshow_kwargs):
     
     fig, ax = plt.subplots(figsize=figsize)
     
@@ -155,8 +155,12 @@ def plot_lb(z, figsize=(8, 4), log_norm=True, title='', **imshow_kwargs):
         cmap = 'magma'
     )
     if log_norm:
+        if log_norm_max is None:
+            log_norm_max = jnp.max(z)
+        if log_norm_min is None:
+            log_norm_min = jnp.min(z)
         imshow_kwargs.update(dict(
-            norm = mpl.colors.LogNorm(jnp.min(z), jnp.max(z))
+            norm = mpl.colors.LogNorm(log_norm_min, log_norm_max)
         ))
     default_kwargs.update(imshow_kwargs)
     im = ax.imshow(jnp.flip(z), **default_kwargs)
