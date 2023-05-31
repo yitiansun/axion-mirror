@@ -1,13 +1,16 @@
+"""Utilities for creating map plots"""
+
 import numpy as np
+from scipy import interpolate
+
 import jax.numpy as jnp
 from jax import jit, vmap
-from scipy import interpolate
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-####################
-## map pixels
+
+#===== map pixels =====
 
 def grid_edges(pixel_size_func, a_min, a_max, a_mid=0.):
     
@@ -29,13 +32,13 @@ def grid_edges(pixel_size_func, a_min, a_max, a_mid=0.):
     return grid_edges
 
 
-####################
-## map functions
+#===== map functions =====
 
 def antipodal_lb_map(lb_map):
     """Antipodal map of a lb_map with dimensions (~b, ~l)."""
     assert lb_map.shape[1] % 2 == 0
     return jnp.roll(jnp.flipud(lb_map), int(lb_map.shape[1]/2), axis=1)
+
 
 # def padded_interpolator(l, b, m):
 #     """Interpolator used to upsample l, b maps."""
@@ -57,6 +60,7 @@ def antipodal_lb_map(lb_map):
 #     padded_m[:,-1] = padded_m[:,1]
     
 #     return interpolate.interp2d(padded_l, padded_b, padded_m)
+
 
 def interp2d(f, x0, x1, xv):
     """Interpolates f(x) at values in xvs. Does not do bound checks.
@@ -81,6 +85,7 @@ def interp2d(f, x0, x1, xv):
     return fll + (f[li0+1,li1]-fll)*p0 + (f[li0,li1+1]-fll)*p1
 
 interp2d_vmap = jit(vmap(interp2d, in_axes=(None, None, None, 0)))
+
 
 def interpolate_padded(m, l, b, lb_s):
     
@@ -109,8 +114,7 @@ def interpolate_padded(m, l, b, lb_s):
     )
 
 
-####################
-## plotting
+#===== plotting =====
 
 def plot_radec(z, extent=None, vmax=None, vmin=None, log_norm=True, figsize=(8, 5), title='',
                save_fn=None, **imshow_kwargs):

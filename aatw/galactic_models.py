@@ -1,21 +1,27 @@
-from functools import partial
+"""Galactic B-field and electron density models
+
+Units:
+    length: [kpc]
+    B field: [muGauss]
+"""
+
+import sys
+sys.path.append("..")
 
 import jax.numpy as jnp
 from jax import vmap
+from functools import partial
 
-import sys
-sys.path.append('..')
-from utils.units_constants import *
+from aatw.units_constants import *
 
-## units
-# length: kpc
-# B field: muGauss
+
+#===== spectral indices =====
 
 spec_ind_p = 3
 spec_ind_alpha = (spec_ind_p+1)/2
 
-####################
-## JF: B field
+
+#===== JF: B field =====
 
 @partial(vmap, in_axes=(None, 0, 0, None))
 def is_in_arm(stz, r_nx_low, r_nx_high, tani):
@@ -29,8 +35,10 @@ def is_in_arm(stz, r_nx_low, r_nx_high, tani):
     in_s_bound = jnp.logical_and(s > 5, s < 20)
     return jnp.logical_and(jnp.logical_or(in_arm_inner, in_arm_outer), in_s_bound)
 
+
 def logistic(z, h, w):
     return 1 / (1 + jnp.exp(-2*(jnp.abs(z)-h)/w))
+
 
 def B_JF(stz):
     """B field model described in 1204.3662.
@@ -91,8 +99,9 @@ def B_JF(stz):
                       B_inner_t + B_arms_t + B_halo_t,
                       B_X_const_z + B_X_lin_z], axis=-1)
 
-####################
-## JF: n_e
+
+#===== JF: n_e =====
+
 def n_e_WMAP(stz):
     """Electron density model from JF (WMAP).
     n_e [unnormalized] as a function of stz ([kpc], [rad], [kpc]). Vectorized
@@ -103,8 +112,7 @@ def n_e_WMAP(stz):
     return jnp.exp(-s/hr) * jnp.cosh(z/hz)**(-2)
 
 
-####################
-## SRWE: B field
+#===== SRWE: B field =====
 
 def B_SRWE_AH(stz_s):
     return B_SRWE_disk_ASR(stz_s) + B_SRWE_halo(stz_s)
@@ -132,6 +140,7 @@ def B_SRWE_disk_ASR(stz_s):
                       BDt_s,
                       jnp.zeros_like(BDt_s)], axis=-1)
 
+
 def B_SRWE_disk_BS(stz_s):
     """B_disk in Bi-symmetric spiral model (BS) from 0711.1572.
     B (stz vector field) ([muG], [muG], [muG]) as a function of stz ([kpc],
@@ -151,6 +160,7 @@ def B_SRWE_disk_BS(stz_s):
                       -D1D2_s*jnp.cos(p_s),
                       jnp.zeros_like(D1D2_s)], axis=-1)
 
+
 def B_SRWE_halo(stz_s):
     """B_halo model from 0711.1572.
     B (stz vector field) ([muG], [muG], [muG]) as a function of stz ([kpc],
@@ -163,10 +173,10 @@ def B_SRWE_halo(stz_s):
                       BH0 / (1+((jnp.abs(z_s)-zH0)/zH1_s)**2)*R_s/RH0*jnp.exp(-(R_s-RH0)/RH0),
                       jnp.zeros_like(zH1_s)], axis=-1)
 
-####################
-## SRWE: n_e
 
-def n_e_SRWE(stz_s): # [unnorm] ( [[kpc], [1], [kpc]] ), vectorized
+#===== SRWE: n_e =====
+
+def n_e_SRWE(stz_s):
     """Electron density model from NE2001.
     n_e [unnormalized] as a function of stz ([kpc], [rad], [kpc]). Vectorized
     manually; batch dimension is the first.

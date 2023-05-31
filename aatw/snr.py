@@ -1,18 +1,19 @@
+"""Functions and class for supernova remnants (SNR)"""
+
 import sys
 sys.path.append('..')
-from utils.units_constants import *
-from utils.spectral import *
 
 import numpy as np
-from astropy.coordinates import SkyCoord
 from scipy import integrate
+from astropy.coordinates import SkyCoord
 
-#from functools import partial
 import jax.numpy as jnp
 
+from aatw.units_constants import *
+from aatw.spectral import *
 
-##############################
-## image
+
+#===== image =====
 
 def gaussian_val(sigma, x0, y0, x, y):
     """x, y can take any shape. Use np to be variable."""
@@ -103,8 +104,8 @@ def add_image_to_map(fullmap, ra_s, dec_s, ra_edges, dec_edges, pixel_area_map,
         print(np.max(T_submap))
 
 
-##############################
-## SNR
+#===== SNR =====
+
 class SNR:
     """Class for supernova remnants (SNR)."""
     
@@ -255,8 +256,7 @@ class SNR:
         return np.sqrt((self.size_t(self.t_fg(xp))/4)**2 + self.blur_sigma_fg(xp)**2)
         
 
-##############################
-## snr utilities
+#===== SNR utilities =====
 
 def GID(l, b):
     if isinstance(l, str):
@@ -273,116 +273,3 @@ def get_snr(name, snr_list):
         if snr.ID==name or snr.name_alt==name:
             return snr
     return None
-
-
-##############################
-## backup
-
-##############################
-## telescope
-
-# class Telescope:
-#     def __init__(self, name=None, hemisphere=None, nu_low=None, nu_high=None,
-#                  Aeff=None, sens=None, tobs=None, Trec=None,
-#                  sq_r=None, effi_eval=None):
-#         self.name = name
-#         self.hemisphere = hemisphere
-        
-#         self.nu_low = nu_low   # MHz | frequency lower bound
-#         self.nu_high = nu_high # MHz | frequency upper bound
-        
-#         self.Aeff = Aeff # cm^2   | Aeff(nu=None) | effective area
-#         self.sens = sens # cm^2/K | sens(nu=None) | sensitivity
-#         self.tobs = tobs # MHz^-1 | obsering time
-#         self.Trec = Trec # K      | receiver temperature
-        
-#         self.sq_r = sq_r # deg | size of square that encloses beam
-#         self.effi_eval = effi_eval # func(func) | effi_eval(nenvl) | efficiency evaluator
-
-
-##############################
-## haslam
-
-# WDIR = '/Users/sunyitian/Dropbox (MIT)/Documents/P/axion gegenschein/axionsversustheworld/'
-# haslam_fitsfn = 'haslam_skymap_YS/lambda_haslam408_nofilt.fits'
-# haslam_hdu = fits.open(WDIR+haslam_fitsfn)[1]
-# haslam_hdu.header['COORDSYS'] = 'G'
-
-# def haslamGXYZ(l=0, b=0, l_span=10, b_span=10, l_npix=100, b_npix=100): # deg # negative span to invert
-#     target_header = fits.Header(
-#         {'NAXIS' : 2, 'NAXIS1': l_npix, 'NAXIS2': b_npix,
-#          'CTYPE1': 'GLON' , 'CUNIT1': 'deg', 'CRVAL1': l, 'CRPIX1': l_npix/2, 'CDELT1': l_span/l_npix,
-#          'CTYPE2': 'GLAT', 'CUNIT2': 'deg', 'CRVAL2': b, 'CRPIX2': b_npix/2, 'CDELT2': b_span/b_npix,
-#          'COORDSYS': 'G'}
-#     )
-#     Z, footprint = reproject_from_healpix(haslam_hdu, target_header)
-#     X, Y = np.meshgrid(np.linspace(l-l_span/2, l+l_span/2, num=l_npix),
-#                        np.linspace(b-b_span/2, b+b_span/2, num=b_npix))
-#     return X, Y, Z/1000 # mK to K
-
-# nu_beta = 2.5 # 1 | galactic synchrontron spectral index
-
-# def Tbkg408(snr, sq_r=None): # K(<SNR>, deg)
-#     _, _, Zbkg = haslamGXYZ(l=snr.cl, b=snr.cb,
-#                             l_span=2*sq_r, b_span=2*sq_r,
-#                             l_npix=10, b_npix=10)
-#     return np.mean(Zbkg)
-
-
-##############################
-## snr other Snu functions
-
-#         def Snu_ts_fl(nu, ts, tiop='1'):
-#             """Same function as Snu_t_fl, except t is vectorized manually.
-#             """
-#             ti = self.ti1 if tiop=='1' else self.ti2
-            
-#             return jnp.where( ts > self.t_MFA,
-#                 self.Snu(nu) * (ts/self.t_now)**ti,
-#                 jnp.full_like(ts, self.Snu(nu) * (self.t_MFA/self.t_now)**ti)
-#             ) * (ts >= 0.).astype(jnp.float32)
-#         self.Snu_ts_fl = Snu_ts_fl
-
-#         def Snu_t_fp(nu, t, tiop='1'):
-#             """Snu: t^1 --t_MFA--> t^(ti/0.4) --t_free--> t^ti. Conserved flux
-#             continues in free expansion. Requires t_free longer than t_MFA.
-#             units: [Jy]([MHz], [yr], ..).
-#             """
-#             assert self.t_free > self.t_MFA
-#             ti = self.ti1 if tiop=='1' else self.ti2
-            
-#             if t > self.t_free: # adiabatic
-#                 return self.Snu(nu) \
-#                        * (t/self.t_now)**ti
-#             elif t > self.t_MFA: # free expansion after MFA
-#                 return self.Snu(nu) \
-#                        * (self.t_free/self.t_now)**ti \
-#                        * (t/self.t_free)**(ti/0.4)
-#             else: # free expansion before MFA
-#                 return self.Snu(nu) \
-#                        * (self.t_free/self.t_now)**ti \
-#                        * (self.t_MFA/self.t_free)**(ti/0.4) \
-#                        * (t/self.t_MFA)
-#         self.Snu_t_fp = Snu_t_fp
-        
-        
-#         def Snu_t_fv(nu, t, tiop='1'): # 
-#             """Snu: t^1 --t_MFA--> t^(1-p) --t_free--> t^ti. B ~ v ~ constant in
-#             free expansion. Requires t_free longer than t_MFA.
-#             units: [Jy]([MHz], [yr], ..)."""
-#             assert self.t_free > self.t_MFA
-#             ti = self.ti1 if tiop=='1' else self.ti2
-            
-#             if t > self.t_free: # adiabatic
-#                 return self.Snu(nu) \
-#                        * (t/self.t_now)**ti
-#             elif t > self.t_MFA: # free expansion after MFA
-#                 return self.Snu(nu) \
-#                        * (self.t_free/self.t_now)**ti \
-#                        * (t/self.t_free)**(1-self.p)
-#             else: # free expansion before MFA
-#                 return self.Snu(nu) \
-#                        * (self.t_free/self.t_now)**ti \
-#                        * (self.t_MFA/self.t_free)**(1-self.p) \
-#                        * (t/self.t_MFA)
-#         self.Snu_t_fv = Snu_t_fv

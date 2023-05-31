@@ -1,23 +1,38 @@
+"""Geometry utilities"""
+
 import sys
 sys.path.append('..')
-
-import jax.numpy as jnp
-from jax import jit, vmap
 
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 
-from utils.units_constants import *
+import jax.numpy as jnp
+from jax import jit, vmap
+
+from aatw.units_constants import *
 
 
-####################
-## geometry
+#===== constants =====
+
+EPSILON = 1e-30
+
+c_NGP = SkyCoord(l=0*u.deg, b=90*u.deg, frame='galactic') # north galactic pole
+c_NCP = SkyCoord(ra=0*u.deg, dec=90*u.deg, frame='icrs') # north celestial pole
+
+ra_NGP = float(c_NGP.icrs.ra/u.rad)
+dec_NGP = float(c_NGP.icrs.dec/u.rad)
+l_NCP = float(c_NCP.galactic.l/u.rad)
+b_NCP = float(c_NCP.galactic.b/u.rad)
+
+
+#===== geometry =====
 
 def unit_vec(v):
     """Unit vector(s) of xyz vector(s). Can take vector input; batch dimension
     is the first dimension.
     """
     return v / jnp.expand_dims(jnp.linalg.norm(v, axis=-1), axis=1)
+
 
 def cross_product(xyz1, xyz2):
     """Cross product of two arrays xyz vectors. Vectorized manually; batch
@@ -30,8 +45,7 @@ def cross_product(xyz1, xyz2):
                       x1*y2 - x2*y1], axis=-1)
 
 
-####################
-## coordinates
+#===== coordinate transformations =====
 
 def Gr(lbd):
     """Distance to galactic center r [L] as a function of galactic coordinates
@@ -58,6 +72,7 @@ def GCstz(lbd):
                       jnp.arctan2(y, x),
                       z], axis=-1)
 
+
 def Glbd(stz):
     """Galactic coordinates with depth (l, b, d) [rad, rad, L] from Galactic
     center cylindrical coordinates (s, t, z) [L, rad, L]. Vectorized manually;
@@ -71,6 +86,7 @@ def Glbd(stz):
                       jnp.arctan2(z, jnp.sqrt((x+r_Sun)**2 + y**2)),
                       jnp.sqrt((x+r_Sun)**2 + y**2 + z**2)], axis=-1)
 
+
 def GCxyz_stz(stz):
     """Galactic center cartesian coordinates (x, y, z) [L, L, L] from Galactic
     center cylindrical coordinates (s, t, z) [L, rad, L]. Vectorized manually;
@@ -82,6 +98,7 @@ def GCxyz_stz(stz):
     # z = z
     return jnp.stack([x, y, z], axis=-1)
 
+
 def LOS_direction(xyz):
     """Line of sight direction (radially outward) of xyz coordinates, in xyz
     coordinates. [kpc] Vectorized manually; batch dimension is the first
@@ -89,6 +106,7 @@ def LOS_direction(xyz):
     """
     x, y, z = xyz[:,0], xyz[:,1], xyz[:,2]
     return unit_vec(jnp.stack([x+r_Sun, y, z], axis=-1))
+
 
 def vstz2vxyz_stz(vstz, stz):
     """Converts a stz vector field in stz coordinates to a xyz vector field in 
@@ -102,17 +120,6 @@ def vstz2vxyz_stz(vstz, stz):
                       vz], axis=-1)
 
 
-c_NGP = SkyCoord(l=0*u.deg, b=90*u.deg, frame='galactic') # north galactic pole
-c_NCP = SkyCoord(ra=0*u.deg, dec=90*u.deg, frame='icrs') # north celestial pole
-
-ra_NGP  = float(c_NGP.icrs.ra/u.rad)
-dec_NGP = float(c_NGP.icrs.dec/u.rad)
-l_NCP = float(c_NCP.galactic.l/u.rad)
-b_NCP = float(c_NCP.galactic.b/u.rad)
-
-EPSILON = 1e-30
-
-
 def lb2radec(lb):
     """Equatorial coordinates (ra, dec) [rad, rad] from galactic coordinates
     (l, b) [rad, rad]. Vectorized manually; batch dimension is the first
@@ -123,6 +130,7 @@ def lb2radec(lb):
                       + jnp.cos(dec_NGP)*jnp.cos(b)*jnp.cos(l_NCP-l) )
     ra = jnp.arcsin( jnp.cos(b)*jnp.sin(l_NCP-l)/(jnp.cos(dec)+EPSILON) ) + ra_NGP
     return jnp.stack([ra, dec], axis=-1)
+
 
 def radec2lb(radec):
     """Galactic coordinates (l, b) [rad, rad] from equatorial coordinates

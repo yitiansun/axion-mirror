@@ -1,15 +1,24 @@
 """Class for telescopes"""
 
-import numpy as np
-
 from dataclasses import dataclass
 from typing import Union, Optional
 
-data_dir = '../data'
+import numpy as np
+
+
+data_dir = "../data"
+
 
 @dataclass
 class Telescope:
-    """nu [MHz], lengths [cm], angles [rad], T [K], t [day]."""
+    """Class for drift scan telescopes.
+    Units:
+        nu [MHz]
+        lengths [cm]
+        angles [rad]
+        T [K]
+        t [day]
+    """
     name: str
     nu_min: float
     nu_max: float
@@ -25,7 +34,7 @@ class Telescope:
     T_sys: Union[str, float]
     t_obs_days: float
     double_pass_dec: Optional[float] = None
-        
+    
     def __post_init__(self):
         
         self.extent = (
@@ -40,7 +49,9 @@ class Telescope:
             self.T_sys_data = np.loadtxt(self.T_sys)
             self.T_sys = lambda nu: np.interp(nu, self.T_sys_data[0], self.T_sys_data[1])
             
-            
+
+#===== telescope instances =====
+
 CHIME = Telescope(
     name = 'CHIME',
     nu_min = 400, nu_max = 800,

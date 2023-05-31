@@ -1,24 +1,24 @@
-"""Functions for the NFW halo."""
+"""Functions for the NFW halo"""
+
+import sys
+sys.path.append('..')
 
 import jax.numpy as jnp
 from jax import jit, vmap
 
-import sys
-sys.path.append('..')
-from utils.units_constants import *
-from utils.geometry import Gr
+from aatw.units_constants import *
+from aatw.geometry import Gr
 
 
-####################
-## constants
+#===== constants =====
 
-rho_r_Sun = 0.46 * GeV / c0**2 # [g/cm^3]
+rho_r_Sun = 0.46*GeV / c0**2 # [g/cm^3]
 intg_d_s = jnp.concatenate((jnp.linspace(0, 20, 200, endpoint=False), # [kpc]
                             jnp.linspace(20, 200, 200, endpoint=False),
                             jnp.linspace(200, 1000, 100, endpoint=True)))
 
-####################
-## functions
+
+#===== functions =====
 
 def rho_NFW(r, gamma=1., r_s=16.):
     """Generalized NFW halo density rho [g/cm^3] as a function of distance to
@@ -31,6 +31,7 @@ def rho_NFW(r, gamma=1., r_s=16.):
 
 rho_integral_ref_length = 10 * kpc # [cm]
 rho_integral_ref = rho_NFW(r_Sun) * rho_integral_ref_length # [g/cm^3] [cm] = [g/cm^2]
+
 
 @jit
 @vmap
