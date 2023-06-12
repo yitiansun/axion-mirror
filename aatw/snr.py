@@ -109,12 +109,14 @@ def add_image_to_map(fullmap, ra_s, dec_s, ra_edges, dec_edges, pixel_area_map,
 class SNR:
     """Class for supernova remnants (SNR)."""
     
-    def __init__(self, ID=None, name_alt=None, snr_type=None, l=None, b=None,
-                 size=None, d=None, t_free=None, t_now=None, t_MFA=None,
-                 si=None, Snu1GHz=None, snrcat_dict=None):
+    def __init__(self, ID=None, name_alt=None, snr_type=None, snrcat_dict=None,
+                 l=None, b=None, size=None, d=None,
+                 t_free=None, t_now=None, t_MFA=None,
+                 si=None, Snu1GHz=None, Snu1GHz_pk=None, t_pk=None):
         self.ID = ID
         self.name_alt = name_alt
         self.snr_type = snr_type
+        self.snrcat_dict = snrcat_dict
         
         self.l = l # [rad] | galactic longitude
         self.b = b # [rad] | galactic latitude
@@ -127,11 +129,12 @@ class SNR:
         self.t_now  = t_now  # [yr] | t=0 at birth
         self.t_MFA  = t_MFA  # [yr] | onset time of magnetic field amplification
         self.si = si # [1] | si>0 | spectral index = (p-1)/2
-        self.Snu1GHz = Snu1GHz # [Jy]
+        self.Snu1GHz = Snu1GHz # [Jy] | Required by observed SNRs
+        self.Snu1GHz_pk = Snu1GHz_pk # [Jy] | Required by graveyard SNRs
+        self.t_pk = t_pk # [yr] | Time at peak luminosity
         
-        self.snrcat_dict = snrcat_dict
         
-    def build(self, rho_DM=None, tiop='2'):
+    def build(self, rho_DM=None, tiop='2', use_lightcurve=False):
         
         #========== variables ==========
         self.cl = self.l + np.pi - 2*np.pi*int(self.l>=np.pi) # [rad] | countersource l | [-pi,pi)
@@ -143,54 +146,79 @@ class SNR:
         self.thetaGCCS = np.arccos( -np.cos(self.l)*np.cos(self.b) ) # [rad] | GC and counter source
         self.thetaGCS = np.pi - self.thetaGCCS # [rad] | GC and source
         
-        self.p   = 2*self.si+1 # si controls p
+        self.p   = 2*self.si+1 # si determines p
         self.ti1 = -2*(self.p+1)/5
         self.ti2 = -4*self.p/5
         
-        #========== Snu ==========
-        def Snu(nu):
-            """Speciic flux [Jy] as a function of frequency nu [MHz]. nu can be
-            a vector.
-            """
-            return self.Snu1GHz * (nu/1000)**(-self.si)
-        self.Snu = Snu
-        
+        #========== Snu(nu, t) ==========
         ti = self.ti1 if tiop=='1' else self.ti2
-        def Snu_t_fl(nu, t):
-            """Snu: constant --t_MFA--> t^ti. Doesn't care about t_free.
-            units: [Jy]([MHz], [yr], ..).
-            """
-            if t < 0:
-                return 0.
-            elif t > self.t_MFA:
-                return self.Snu(nu) * (t/self.t_now)**ti
-            else:
-                return self.Snu(nu) * (self.t_MFA/self.t_now)**ti
-        self.Snu_t_fl = Snu_t_fl
+        
+        if use_lightcurve:
+            Snu1GHz_t_free = self.Snu1GHz_pk * jnp.exp(1.5*(1-self.t_pk/self.t_free)) \
+                             * (self.t_free/self.t_pk)**(-1.5)
+            self.Snu1GHz = Snu1GHz_t_free * (self.t_now/self.t_free)**ti # ti < 0
+            def Snu(nu):
+                """Specific flux [Jy] as a function of frequency nu [MHz].
+                nu can be a vector.
+                """
+                return self.Snu1GHz * (nu/1000)**(-self.si)
+            self.Snu = Snu
+            
+            def Snu_t_lightcurve(nu, t):
+                """Snu: lightcurve --t_free--> t^ti. Doesn't care about t_MFA.
+                units: [Jy]([MHz], [yr]).
+                """
+                if t < 0:
+                    return 0.
+                elif t < self.t_free:
+                    return self.Snu(nu) / self.Snu1GHz * self.Snu1GHz_pk * jnp.exp(1.5*(1-self.t_pk/t)) * (t/self.t_pk)**(-1.5)
+                else:
+                    return self.Snu(nu) / self.Snu1GHz * Snu1GHz_t_free * (t/self.t_now)**ti
+            self.Snu_t = Snu_t_lightcurve
+        else:
+            def Snu(nu):
+                """Specific flux [Jy] as a function of frequency nu [MHz].
+                nu can be a vector.
+                """
+                return self.Snu1GHz * (nu/1000)**(-self.si)
+            self.Snu = Snu
+            
+            def Snu_t_fl(nu, t):
+                """Snu: constant --t_MFA--> t^ti. Doesn't care about t_free.
+                units: [Jy]([MHz], [yr]).
+                """
+                if t < 0:
+                    return 0.
+                elif t > self.t_MFA:
+                    return self.Snu(nu) * (t/self.t_now)**ti
+                else:
+                    return self.Snu(nu) * (self.t_MFA/self.t_now)**ti
+            self.Snu_t = Snu_t_fl
+            
         
         #========== gegenschein ==========
         nu_ref = 1000 # [MHz]
-        intgd = lambda xp: self.Snu_t_fl(nu_ref, self.t(xp)) * rho_DM(np.maximum(self.Gr(xp), 0.01)) * kpc # converted intgd*dx from [Jy g/cm^3 kpc] to [Jy g/cm^3 cm] to bring numerical value closer to 1
+        intgd = lambda xp: self.Snu_t(nu_ref, self.t(xp)) * rho_DM(np.maximum(self.Gr(xp), 0.01)) * kpc # converted intgd*dx from [Jy g/cm^3 kpc] to [Jy g/cm^3 cm] to bring numerical value closer to 1
         intg, err = integrate.quad(intgd, 0, self.xp(0)) # [Jy g/cm^2]
         self.Sgnu_ref = prefac(nu_ref) * intg # = [g^-1 cm^2] [Jy g cm^-2] = [Jy]
         def Sgnu(nu): # [Jy]([MHz])
             return self.Sgnu_ref * (prefac(nu)/prefac(nu_ref)) * (self.Snu(nu)/self.Snu1GHz)
         self.Sgnu = Sgnu
         
-        imsz_intgd = lambda xp: self.image_sigma_at(xp) * self.Snu_t_fl(nu_ref, self.t(xp)) * rho_DM(self.Gr(xp)) * kpc
+        imsz_intgd = lambda xp: self.image_sigma_at(xp) * self.Snu_t(nu_ref, self.t(xp)) * rho_DM(self.Gr(xp)) * kpc
         imsz_intg, err = integrate.quad(imsz_intgd, 0, self.xp(0))
         self.image_sigma = imsz_intg/intg # [arcmin]
         
         #========== front gegenschein ==========
         nu_ref = 1000 # [MHz]
-        intgd = lambda xp: self.Snu_t_fl(nu_ref, self.t_fg(xp)) * rho_DM(np.maximum(self.Gr_fg(xp), 0.01)) * kpc # converted intgd*dx from [Jy g/cm^3 kpc] to [Jy g/cm^3 cm] to bring numerical value closer to 1
+        intgd = lambda xp: self.Snu_t(nu_ref, self.t_fg(xp)) * rho_DM(np.maximum(self.Gr_fg(xp), 0.01)) * kpc # converted intgd*dx from [Jy g/cm^3 kpc] to [Jy g/cm^3 cm] to bring numerical value closer to 1
         intg, err = integrate.quad(intgd, self.d, self.xp_fg(0)) # [Jy g/cm^2]
         self.Sfgnu_ref = prefac(nu_ref) * intg # = [g^-1 cm^2] [Jy g cm^-2] = [Jy]
         def Sfgnu(nu): # [Jy]([MHz])
             return self.Sfgnu_ref * (prefac(nu)/prefac(nu_ref)) * (self.Snu(nu)/self.Snu1GHz)
         self.Sfgnu = Sfgnu
         
-        imsz_intgd = lambda xp: self.image_sigma_at_fg(xp) * self.Snu_t_fl(nu_ref, self.t_fg(xp)) * rho_DM(self.Gr_fg(xp)) * kpc
+        imsz_intgd = lambda xp: self.image_sigma_at_fg(xp) * self.Snu_t(nu_ref, self.t_fg(xp)) * rho_DM(self.Gr_fg(xp)) * kpc
         imsz_intg, err = integrate.quad(imsz_intgd, self.d, self.xp_fg(0))
         self.image_sigma_fg = imsz_intg/intg # [arcmin]
         if np.isnan(imsz_intg):

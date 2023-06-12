@@ -18,6 +18,7 @@ hbar = 1.05457e-33 # [cm^2 MHz g]
 #===== derived =====
 
 hour = 3.6e9 # [MHz^-1]
+sec = 1e6 # [MHz^-1]
 GeV = 1.60218e-15 # [cm^2 MHz^2 g]
 invGeV = 1/GeV # [cm^-2 MHz^-2 g^-1]
 Jy = 1e-35 # [MHz^2 g]
