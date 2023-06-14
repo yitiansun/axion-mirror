@@ -3,6 +3,7 @@ test/
 **/.DS_Store
 .tmp.driveupload/
 data/CHIME_estimate_intermediates/
+data/SNR/graveyard_realizations/
 #========================
 
 # Byte-compiled / optimized / DLL files

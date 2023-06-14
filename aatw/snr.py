@@ -2,6 +2,8 @@
 
 import sys
 sys.path.append('..')
+from dataclasses import dataclass, asdict
+import json
 
 import numpy as np
 from scipy import integrate
@@ -11,6 +13,7 @@ import jax.numpy as jnp
 
 from aatw.units_constants import *
 from aatw.spectral import *
+from aatw.math import left_geom_trapz, right_geom_trapz
 
 
 #===== image =====
@@ -19,7 +22,7 @@ def gaussian_val(sigma, x0, y0, x, y):
     """x, y can take any shape. Use np to be variable."""
     return np.exp( -((x-x0)**2+(y-y0)**2)/(2*sigma**2) )
 
-@jit
+#@jit
 def gaussian_integral_estimate(x0, y0, sigma,
                                x_range, y_range, sample_n=(10, 10)):
     """Rough estimate of 2D gaussian integral in rectangles by sampling points
@@ -106,137 +109,138 @@ def add_image_to_map(fullmap, ra_s, dec_s, ra_edges, dec_edges, pixel_area_map,
 
 #===== SNR =====
 
+def S_lightcurve(S_pk, t_pk, t):
+    """Vectorized in t."""
+    return S_pk * np.exp(1.5*(1-t_pk/t)) * (t/t_pk)**(-1.5)
+
+
+@dataclass
 class SNR:
     """Class for supernova remnants (SNR)."""
+    ID: str = None
+    name_alt: str = None
+    snr_type: str = None
+    snrcat_dict: dict = None
+    green_dict: dict = None
+    l: float = None # [rad] | galactic longitude
+    b: float = None # [rad] | galactic latitude
+    size: float = None # [rad] | size estimate
+    d: float = None # [kpc] | distance estimate
+    d_min: float = None # [kpc]
+    d_max: float = None # [kpc]
+    t_free: float = None # [yr] | t=0 at birth
+    t_now: float = None  # [yr] | t=0 at birth
+    t_now_min: float = None  # [yr]
+    t_now_max: float = None  # [yr]
+    t_MFA: float = None  # [yr] | onset time of magnetic field amplification
+    si: float = None # [1] | si>0 | spectral index = (p-1)/2
+    si_guessed: bool = None
+    Snu1GHz: float = None # [Jy] | Required by observed SNRs
+    Snu1GHz_pk: float = None # [Jy] | Required by graveyard SNRs
+    t_pk: float = None # [yr] | Time at peak luminosity
     
-    def __init__(self, ID=None, name_alt=None, snr_type=None, snrcat_dict=None,
-                 l=None, b=None, size=None, d=None,
-                 t_free=None, t_now=None, t_MFA=None,
-                 si=None, Snu1GHz=None, Snu1GHz_pk=None, t_pk=None):
-        self.ID = ID
-        self.name_alt = name_alt
-        self.snr_type = snr_type
-        self.snrcat_dict = snrcat_dict
+    #===== options =====
+    tiop: str = None
+    integrate_method: str = None
+    use_lightcurve: bool = None # Whether to use lightcurve for free expansion
+    
+    #===== below are dependent quantities =====
+    cl: float = None
+    cb: float = None
+    ra: float = None
+    dec: float = None
+    hemisph: str = None
+    thetaGCCS: float = None
+    thetaGCS: float = None
+    p: float = None
+    ti1: float = None
+    ti2: float = None
+    ti: float = None
+    Snu1GHz_t_free: float = None
+    nu_ref: float = None
+    
+    Sgnu_ref: float = None
+    image_sigma: float = None
+    Sfgnu_ref: float = None
+    image_sigma_fg: float = None
+    
         
-        self.l = l # [rad] | galactic longitude
-        self.b = b # [rad] | galactic latitude
+    def __post_init__(self):
         if self.l == 0 and self.b == 0:
             self.b = np.deg2rad(0.1)
-        self.size = size # [rad] | size estimate
-        self.d = d # [kpc] | distance estimate
-        
-        self.t_free = t_free # [yr] | t=0 at birth
-        self.t_now  = t_now  # [yr] | t=0 at birth
-        self.t_MFA  = t_MFA  # [yr] | onset time of magnetic field amplification
-        self.si = si # [1] | si>0 | spectral index = (p-1)/2
-        self.Snu1GHz = Snu1GHz # [Jy] | Required by observed SNRs
-        self.Snu1GHz_pk = Snu1GHz_pk # [Jy] | Required by graveyard SNRs
-        self.t_pk = t_pk # [yr] | Time at peak luminosity
-        
-        
-    def build(self, rho_DM=None, tiop='2', use_lightcurve=False):
+
+    
+    def build(self, rho_DM=None, tiop='2', integrate_method='quad', use_lightcurve=False):
         
         #========== variables ==========
         self.cl = self.l + np.pi - 2*np.pi*int(self.l>=np.pi) # [rad] | countersource l | [-pi,pi)
         self.cb = - self.b # [rad] | countersource b
-        self.coord = SkyCoord(l=self.l, b=self.b, frame='galactic', unit='rad')
-        self.ra  = self.coord.icrs.ra.rad
-        self.dec = self.coord.icrs.dec.rad
+        coord = SkyCoord(l=self.l, b=self.b, frame='galactic', unit='rad')
+        self.ra  = coord.icrs.ra.rad
+        self.dec = coord.icrs.dec.rad
         self.hemisph = 'N' if self.dec > 0 else 'S'
         self.thetaGCCS = np.arccos( -np.cos(self.l)*np.cos(self.b) ) # [rad] | GC and counter source
         self.thetaGCS = np.pi - self.thetaGCCS # [rad] | GC and source
-        
         self.p   = 2*self.si+1 # si determines p
         self.ti1 = -2*(self.p+1)/5
         self.ti2 = -4*self.p/5
+        self.tiop = tiop
+        self.ti = self.ti1 if self.tiop=='1' else self.ti2
         
         #========== Snu(nu, t) ==========
-        ti = self.ti1 if tiop=='1' else self.ti2
-        
-        if use_lightcurve:
-            Snu1GHz_t_free = self.Snu1GHz_pk * jnp.exp(1.5*(1-self.t_pk/self.t_free)) \
-                             * (self.t_free/self.t_pk)**(-1.5)
-            self.Snu1GHz = Snu1GHz_t_free * (self.t_now/self.t_free)**ti # ti < 0
-            def Snu(nu):
-                """Specific flux [Jy] as a function of frequency nu [MHz].
-                nu can be a vector.
-                """
-                return self.Snu1GHz * (nu/1000)**(-self.si)
-            self.Snu = Snu
+        self.use_lightcurve = use_lightcurve
+        if self.use_lightcurve:
+            self.Snu1GHz_t_free = S_lightcurve(self.Snu1GHz_pk, self.t_pk, self.t_free)
+            self.Snu1GHz = self.Snu1GHz_t_free * (self.t_now/self.t_free)**self.ti # ti < 0
             
-            def Snu_t_lightcurve(nu, t):
-                """Snu: lightcurve --t_free--> t^ti. Doesn't care about t_MFA.
-                units: [Jy]([MHz], [yr]).
-                """
-                if t < 0:
-                    return 0.
-                elif t < self.t_free:
-                    return self.Snu(nu) / self.Snu1GHz * self.Snu1GHz_pk * jnp.exp(1.5*(1-self.t_pk/t)) * (t/self.t_pk)**(-1.5)
-                else:
-                    return self.Snu(nu) / self.Snu1GHz * Snu1GHz_t_free * (t/self.t_now)**ti
-            self.Snu_t = Snu_t_lightcurve
+        #========== integration setup ==========
+        EPSILON = 1e-8
+        self.integrate_method = integrate_method
+        if self.integrate_method == 'quad':
+            def integrator(*args):
+                return integrate.quad(*args)[0]
+        elif self.integrate_method == 'trapz':
+            def integrator(*args):
+                return right_geom_trapz(*args, offset=0.01*c0_kpc_yr) # [0.01 yr]
         else:
-            def Snu(nu):
-                """Specific flux [Jy] as a function of frequency nu [MHz].
-                nu can be a vector.
-                """
-                return self.Snu1GHz * (nu/1000)**(-self.si)
-            self.Snu = Snu
+            raise NotImplementedError(self.integrate_method)
             
-            def Snu_t_fl(nu, t):
-                """Snu: constant --t_MFA--> t^ti. Doesn't care about t_free.
-                units: [Jy]([MHz], [yr]).
-                """
-                if t < 0:
-                    return 0.
-                elif t > self.t_MFA:
-                    return self.Snu(nu) * (t/self.t_now)**ti
-                else:
-                    return self.Snu(nu) * (self.t_MFA/self.t_now)**ti
-            self.Snu_t = Snu_t_fl
-            
+        self.nu_ref = 1000 # [MHz]
         
-        #========== gegenschein ==========
-        nu_ref = 1000 # [MHz]
-        intgd = lambda xp: self.Snu_t(nu_ref, self.t(xp)) * rho_DM(np.maximum(self.Gr(xp), 0.01)) * kpc # converted intgd*dx from [Jy g/cm^3 kpc] to [Jy g/cm^3 cm] to bring numerical value closer to 1
-        intg, err = integrate.quad(intgd, 0, self.xp(0)) # [Jy g/cm^2]
-        self.Sgnu_ref = prefac(nu_ref) * intg # = [g^-1 cm^2] [Jy g cm^-2] = [Jy]
-        def Sgnu(nu): # [Jy]([MHz])
-            return self.Sgnu_ref * (prefac(nu)/prefac(nu_ref)) * (self.Snu(nu)/self.Snu1GHz)
-        self.Sgnu = Sgnu
-        
-        imsz_intgd = lambda xp: self.image_sigma_at(xp) * self.Snu_t(nu_ref, self.t(xp)) * rho_DM(self.Gr(xp)) * kpc
-        imsz_intg, err = integrate.quad(imsz_intgd, 0, self.xp(0))
+        #========== gegenschein & front gegenschein ==========
+        intgd = lambda xp: self.Snu_t(self.nu_ref, self.t(xp)) * rho_DM(np.maximum(self.Gr(xp), 1e-3)) * kpc
+        # converted intgd*dx from [Jy g/cm^3 kpc] to [Jy g/cm^3 cm] to bring numerical value closer to 1
+        intg = integrator(intgd, 0, self.xp(0)-EPSILON) # [Jy g/cm^2]
+        self.Sgnu_ref = prefac(self.nu_ref) * intg # = [g^-1 cm^2] [Jy g cm^-2] = [Jy]
+        imsz_intgd = lambda xp: self.image_sigma_at(xp) * self.Snu_t(self.nu_ref, self.t(xp)) * rho_DM(self.Gr(xp)) * kpc
+        imsz_intg = integrator(imsz_intgd, 0, self.xp(0)-EPSILON)
         self.image_sigma = imsz_intg/intg # [arcmin]
-        
-        #========== front gegenschein ==========
-        nu_ref = 1000 # [MHz]
-        intgd = lambda xp: self.Snu_t(nu_ref, self.t_fg(xp)) * rho_DM(np.maximum(self.Gr_fg(xp), 0.01)) * kpc # converted intgd*dx from [Jy g/cm^3 kpc] to [Jy g/cm^3 cm] to bring numerical value closer to 1
-        intg, err = integrate.quad(intgd, self.d, self.xp_fg(0)) # [Jy g/cm^2]
-        self.Sfgnu_ref = prefac(nu_ref) * intg # = [g^-1 cm^2] [Jy g cm^-2] = [Jy]
-        def Sfgnu(nu): # [Jy]([MHz])
-            return self.Sfgnu_ref * (prefac(nu)/prefac(nu_ref)) * (self.Snu(nu)/self.Snu1GHz)
-        self.Sfgnu = Sfgnu
-        
-        imsz_intgd = lambda xp: self.image_sigma_at_fg(xp) * self.Snu_t(nu_ref, self.t_fg(xp)) * rho_DM(self.Gr_fg(xp)) * kpc
-        imsz_intg, err = integrate.quad(imsz_intgd, self.d, self.xp_fg(0))
+
+        intgd = lambda xp: self.Snu_t(self.nu_ref, self.t_fg(xp)) * rho_DM(np.maximum(self.Gr_fg(xp), 1e-3)) * kpc
+        # converted intgd*dx from [Jy g/cm^3 kpc] to [Jy g/cm^3 cm] to bring numerical value closer to 1
+        intg = integrator(intgd, self.d, self.xp_fg(0)-EPSILON) # [Jy g/cm^2]
+        self.Sfgnu_ref = prefac(self.nu_ref) * intg # = [g^-1 cm^2] [Jy g cm^-2] = [Jy]
+        imsz_intgd = lambda xp: self.image_sigma_at_fg(xp) * self.Snu_t(self.nu_ref, self.t_fg(xp)) * rho_DM(self.Gr_fg(xp)) * kpc
+        imsz_intg = integrator(imsz_intgd, self.d, self.xp_fg(0)-EPSILON)
         self.image_sigma_fg = imsz_intg/intg # [arcmin]
-        if np.isnan(imsz_intg):
-            raise ValueError(f'{self.ID} image_sigma_fg')
-        
+            
+        if np.any(np.isnan([self.Sgnu_ref, self.Sfgnu_ref, self.image_sigma, self.image_sigma_fg])):
+            raise ValueError(f'{self.ID}: integrated quantities contains NAN.')
+            
         
     def name(self):
         """Returns name_alt or ID if name_alt is not present."""
         return self.name_alt if self.name_alt != '' else self.ID
     
     def size_t(self, t):
-        """Size [rad] as a function of t [yr]."""
-        if t > self.t_free:
-            return self.size * (t/self.t_now)**0.4
-        elif t > 0:
-            return self.size * (self.t_free/self.t_now)**0.4 * (t/self.t_free)
-        else:
-            return 0.
+        """Size [rad] as a function of t [yr] (can be a vector)."""
+        return np.where(
+            t > self.t_free, self.size * (t/self.t_now)**0.4,
+            np.where(
+                t > 0, self.size * (self.t_free/self.t_now)**0.4 * (t/self.t_free),
+                np.zeros_like(t),
+            )
+        )
         
     def xp(self, t):
         """x' (x_d) [kpc] as a function of SNR t [yr] (can be a vector)."""
@@ -267,21 +271,64 @@ class SNR:
     
     def Gr(self, xp):
         """Distance to GC [kpc] as a function of x' (x_d) [kpc] (can be a vector)."""
-        return jnp.sqrt(xp**2 + r_Sun**2 - 2*r_Sun*xp*jnp.cos(self.thetaGCCS))
+        return np.sqrt(xp**2 + r_Sun**2 - 2*r_Sun*xp*np.cos(self.thetaGCCS))
     
     def Gr_fg(self, xp):
         """Distance to GC [kpc] as a function of x' (x_d) [kpc] (can be a vector).
         Front gegenschein."""
-        return jnp.sqrt(xp**2 + r_Sun**2 - 2*r_Sun*xp*jnp.cos(self.thetaGCS))
+        return np.sqrt(xp**2 + r_Sun**2 - 2*r_Sun*xp*np.cos(self.thetaGCS))
     
     def image_sigma_at(self, xp):
-        """Image sigma [rad] as a function of x' (x_d) [kpc]."""
+        """Gegenschein image sigma [rad] as a function of x' (x_d) [kpc]
+        (can be a vector)."""
         return np.sqrt((self.size_t(self.t(xp))/4)**2 + self.blur_sigma(xp)**2)
     
     def image_sigma_at_fg(self, xp):
-        """Image sigma [rad] as a function of x' (x_d) [kpc].
-        Front gegenschein."""
+        """Front gegenschein image sigma [rad] as a function of x' (x_d) [kpc]
+        (can be a vector)."""
         return np.sqrt((self.size_t(self.t_fg(xp))/4)**2 + self.blur_sigma_fg(xp)**2)
+    
+    
+    def Snu(self, nu):
+        """Specific flux [Jy] as a function of frequency nu [MHz]."""
+        return self.Snu1GHz * (nu/1000)**(-self.si)
+    
+    def Snu_t_lightcurve(self, nu, t):
+        """Snu: lightcurve --t_free--> t^ti. Doesn't care about t_MFA.
+        units: [Jy]([MHz], [yr]). Vectorized in t."""
+        return np.where(
+            t <= 0, np.zeros_like(t),
+            np.where(
+                t < self.t_free, S_lightcurve(self.Snu1GHz_pk, self.t_pk, t) * (nu/1000)**(-self.si),
+                self.Snu1GHz_t_free * (t/self.t_free)**self.ti * (nu/1000)**(-self.si)
+            )
+        )
+    
+    def Snu_t_fl(self, nu, t):
+        """Snu: constant --t_MFA--> t^ti. Doesn't care about t_free.
+        units: [Jy]([MHz], [yr]). Vectorized in t."""
+        return np.where(
+            t < 0, np.zeros_like(t),
+            np.where(
+                t > self.t_MFA, self.Snu(nu) * (t/self.t_now)**self.ti,
+                self.Snu(nu) * (self.t_MFA/self.t_now)**self.ti
+            )
+        )
+    
+    def Snu_t(self, nu, t):
+        """Switch between Snu_t_lightcurve and Snu_t_fl."""
+        if self.use_lightcurve:
+            return self.Snu_t_lightcurve(nu, t)
+        else:
+            return self.Snu_t_fl(nu, t)
+        
+    def Sgnu(self, nu):
+        """Gegenschein flux [Jy] as a function of frequency nu [MHz]."""
+        return self.Sgnu_ref * (prefac(nu)/prefac(self.nu_ref)) * (self.Snu(nu)/self.Snu1GHz)
+    
+    def Sfgnu(self, nu):
+        """Front gegenschein flux [Jy] as a function of frequency nu [MHz]."""
+        return self.Sfgnu_ref * (prefac(nu)/prefac(self.nu_ref)) * (self.Snu(nu)/self.Snu1GHz)
         
 
 #===== SNR utilities =====
@@ -301,3 +348,12 @@ def get_snr(name, snr_list):
         if snr.ID==name or snr.name_alt==name:
             return snr
     return None
+
+
+def dump_snr_list(snr_list, fn):
+    config_list = [asdict(snr) for snr in snr_list]
+    json.dump(config_list, open(fn, 'w'))
+    
+def load_snr_list(fn):
+    config_list = json.load(open(fn, 'r'))
+    return [SNR(**config) for config in config_list]
