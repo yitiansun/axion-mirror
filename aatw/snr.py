@@ -116,7 +116,14 @@ def S_lightcurve(S_pk, t_pk, t):
 
 @dataclass
 class SNR:
-    """Class for supernova remnants (SNR)."""
+    """Class for supernova remnants (SNRs).
+    Units:
+        nu... [MHz]
+        angles [rad] | coordinates, sizes, image_sigma..., theta...
+        distances [kpc] | d..., x..., Gr...
+        t... [yr]
+        Snu... [Jy]
+    """
     ID: str = None
     name_alt: str = None
     snr_type: str = None
