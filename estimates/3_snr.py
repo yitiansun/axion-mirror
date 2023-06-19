@@ -13,7 +13,7 @@ from aatw.snr import load_snr_list, add_image_to_map
 
 
 def snr(
-    run_dir, snr_population=..., snr_list_realizations=..., Sgfgnu1GHz_threshold=...,
+    run_dir, snr_population=..., snr_list_realizations=..., Sgfgnu1GHz_threshold=0.,
     telescope=..., nu_arr=..., i_nu=..., i_ra_grid_shift=..., i_dec_grid_shift=..., **kwargs
 ):
     
@@ -100,14 +100,18 @@ if __name__ == "__main__":
     config_name = 'CHIME-nnu30-nra3-ndec3'
     config = config_dict[config_name]
     
-    snr_population = 'snr-graveyard'
+    snr_population = 'snr-partialinfo'
     
     if snr_population == 'snr-fullinfo':
         valid_snr_list = load_snr_list("../data/SNR/snrlist_none.json")
         snr_list_realizations = [valid_snr_list]
         
     elif snr_population == 'snr-partialinfo':
-        pass
+        snr_list_samples = []
+        for i_sample in tqdm(range(100)):
+            snr_list_samples.append(
+                load_snr_list(f"../outputs/snr/partialinfo_samples/partialinfo_{i_sample}.json")
+            )
     
     elif snr_population == 'snr-graveyard':
         snr_list_realizations = []
@@ -127,8 +131,8 @@ if __name__ == "__main__":
                 snr(
                     run_dir=f'{intermediates_dir}/{config_name}',
                     snr_population=snr_population,
-                    snr_list_realizations=snr_list_realizations,
-                    Sgfgnu1GHz_threshold=1e-8, # [Jy]
+                    snr_list_realizations=snr_list_samples,
+                    #Sgfgnu1GHz_threshold=1e-8, # [Jy]
                     i_nu=i_nu, i_ra_grid_shift=i_ra, i_dec_grid_shift=i_dec, **config
                 )
                 

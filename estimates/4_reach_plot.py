@@ -13,8 +13,8 @@ from aatw.spectral import dnu
 if __name__=="__main__":
     
     #===== plot config =====
-    include_sources = ['snr-graveyard']
-    plot_name = 'snrg1e-8'
+    include_sources = ['gsr', 'snr-fullinfo', 'snr-partialinfo', 'snr-graveyard']
+    plot_name = 'total'
     average_over_grid_shift = True
     
     
