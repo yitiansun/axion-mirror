@@ -1,6 +1,6 @@
 # Axions against the world
 
-![](data/plots/show.png)
+![](outputs/graveyard_samples.gif)
 
 ## Using Colaboratory
 
