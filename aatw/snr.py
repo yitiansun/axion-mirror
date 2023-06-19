@@ -14,6 +14,7 @@ import jax.numpy as jnp
 from aatw.units_constants import *
 from aatw.spectral import *
 from aatw.math import left_geom_trapz, right_geom_trapz
+from aatw.nfw import rho_NFW
 
 
 #===== image =====
@@ -109,9 +110,9 @@ def add_image_to_map(fullmap, ra_s, dec_s, ra_edges, dec_edges, pixel_area_map,
 
 #===== SNR =====
 
-def S_lightcurve(S_pk, t_pk, t):
-    """Vectorized in t."""
-    return S_pk * np.exp(1.5*(1-t_pk/t)) * (t/t_pk)**(-1.5)
+def lightcurve_scale(t_pk, t):
+    """S/S_pk as a function of t/t_pk. Vectorized in t."""
+    return np.exp(1.5*(1-t_pk/t)) * (t/t_pk)**(-1.5)
 
 
 @dataclass
@@ -150,6 +151,7 @@ class SNR:
     tiop: str = None
     integrate_method: str = None
     use_lightcurve: bool = None # Whether to use lightcurve for free expansion
+    infer_lightcurve_from_now: bool = None # Whether lightcurve inferred from information at present day
     
     #===== below are dependent quantities =====
     cl: float = None
@@ -177,7 +179,8 @@ class SNR:
             self.b = np.deg2rad(0.1)
 
     
-    def build(self, rho_DM=None, tiop='2', integrate_method='quad', use_lightcurve=False):
+    def build(self, rho_DM=rho_NFW, tiop='2', integrate_method='quad',
+              use_lightcurve=False, infer_lightcurve_from_now=False):
         
         #========== variables ==========
         self.cl = self.l + np.pi - 2*np.pi*int(self.l>=np.pi) # [rad] | countersource l | [-pi,pi)
@@ -196,9 +199,19 @@ class SNR:
         
         #========== Snu(nu, t) ==========
         self.use_lightcurve = use_lightcurve
+        self.infer_lightcurve_from_now = infer_lightcurve_from_now
         if self.use_lightcurve:
-            self.Snu1GHz_t_free = S_lightcurve(self.Snu1GHz_pk, self.t_pk, self.t_free)
-            self.Snu1GHz = self.Snu1GHz_t_free * (self.t_now/self.t_free)**self.ti # ti < 0
+            if self.infer_lightcurve_from_now:
+                # requires Snu1GHz, t_pk, t_free
+                self.Snu1GHz_t_free = self.Snu1GHz * (self.t_now/self.t_free)**(-self.ti) # ti < 0
+                self.Snu1GHz_pk = self.Snu1GHz_t_free / lightcurve_scale(self.t_pk, self.t_free)
+            else:
+                # requires Snu1GHz_pk, t_pk, t_free
+                self.Snu1GHz_t_free = self.Snu1GHz_pk * lightcurve_scale(self.t_pk, self.t_free)
+                self.Snu1GHz = self.Snu1GHz_t_free * (self.t_now/self.t_free)**self.ti # ti < 0
+        else:
+            # requires Snu1GHz, t_MFA
+            pass
             
         #========== integration setup ==========
         EPSILON = 1e-8
@@ -306,7 +319,7 @@ class SNR:
         return np.where(
             t <= 0, np.zeros_like(t),
             np.where(
-                t < self.t_free, S_lightcurve(self.Snu1GHz_pk, self.t_pk, t) * (nu/1000)**(-self.si),
+                t < self.t_free, self.Snu1GHz_pk * lightcurve_scale(self.t_pk, t) * (nu/1000)**(-self.si),
                 self.Snu1GHz_t_free * (t/self.t_free)**self.ti * (nu/1000)**(-self.si)
             )
         )

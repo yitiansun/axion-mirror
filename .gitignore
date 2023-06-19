@@ -1,9 +1,8 @@
 #===== This project =====
-test/
 **/.DS_Store
 .tmp.driveupload/
-data/CHIME_estimate_intermediates/
-data/SNR/graveyard_realizations/
+outputs/snr/graveyard_samples/
+outputs/snr/partialinfo_samples/
 #========================
 
 # Byte-compiled / optimized / DLL files

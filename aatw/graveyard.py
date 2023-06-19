@@ -129,42 +129,50 @@ def sample_snr_stz_G(num_samples):
 
 #===== spectral index =====
 
-def sample_si(size):
+def sample_si(num_samples):
     """See ../notebooks/snr_graveyard.ipynb"""
     si_skewness, si_loc, si_scale = -1.2377486349155773, 0.5991927451179504, 0.1894835347218209
-    return stats.skewnorm.rvs(si_skewness, loc=si_loc, scale=si_scale, size=size)
+    return stats.skewnorm.rvs(si_skewness, loc=si_loc, scale=si_scale, size=num_samples)
 
 
 #===== size =====
 
-def sample_size_1kyr(size):
+def sample_size_1kyr(num_samples):
     """See ../notebooks/snr_graveyard.ipynb"""
     size_skewness, size_loc, size_scale = 9.383925762403216, 0.0036672822153501466, 0.010441241123269699
-    return stats.skewnorm.rvs(size_skewness, loc=size_loc, scale=size_scale, size=size)
+    return stats.skewnorm.rvs(size_skewness, loc=size_loc, scale=size_scale, size=num_samples)
+
+def sample_size_now(num_samples, t_now=...):
+    """t_now in [yr], can be a vector."""
+    return sample_size_1kyr(num_samples) * (1000/t_now)**0.4
 
 
 #===== lightcurve =====
 
-def sample_t_pk(size):
-    """See ../notebooks/snr_graveyard.ipynb"""
+def sample_t_pk(num_samples):
+    
     t_pk_mean = 50 # [day]
     t_pk_stddex = 0.9 # [1]
-    return 10**(stats.norm.rvs(loc=np.log10(t_pk_mean), scale=t_pk_stddex, size=size)) / 365.25 # [yr]
+    return 10**(stats.norm.rvs(loc=np.log10(t_pk_mean), scale=t_pk_stddex, size=num_samples)) / 365.25 # [yr]
 
-
-def sample_L_pk(size):
-    """See ../notebooks/snr_graveyard.ipynb"""
+def sample_L_pk(num_samples):
+    
     L_pk_mean = 3e25 # [erg/s/Hz]
     L_pk_stddex = 1.5 # [1]
-    return 10**(stats.norm.rvs(loc=np.log10(L_pk_mean), scale=L_pk_stddex, size=size))
+    return 10**(stats.norm.rvs(loc=np.log10(L_pk_mean), scale=L_pk_stddex, size=num_samples))
+
+def sample_Snu1GHz_pk(num_samples, si=..., d=...):
+    """d in [kpc]. d and si can be vectors."""
+    Snu6p3GHz_pk = sample_L_pk(num_samples) / (4*np.pi*(d*kpc)**2) / sec**2 / Jy # [Jy]
+    return Snu6p3GHz_pk * np.sqrt(4*10) ** si
     
     
 #===== t_free =====
 
-def sample_t_free(size):
+def sample_t_free(num_samples):
     """See ../notebooks/snr_graveyard.ipynb"""
     t_free_skewness, t_free_loc, t_free_scale = -0.4409101842885288, 2.322143632416538, 0.8307012289498359
-    return 10**stats.skewnorm.rvs(t_free_skewness, loc=t_free_loc, scale=t_free_scale, size=size)
+    return 10**stats.skewnorm.rvs(t_free_skewness, loc=t_free_loc, scale=t_free_scale, size=num_samples)
 
 def fixed_t_free(value='est'):
     """[yr]"""
@@ -190,19 +198,15 @@ def sample_graveyard_snrs(t_cutoff=100000, verbose=1):
     
     lbd_arr = np.array(Glbd(sample_snr_stz_G(n_snr)), dtype=np.float64)
     si_arr = sample_si(n_snr)
-    size_arr = sample_size_1kyr(n_snr) * (1000/t_now_arr)**0.4
+    size_arr = sample_size_now(n_snr, t_now=t_now_arr)
     L_pk_arr = sample_L_pk(n_snr)
     t_pk_arr = sample_t_pk(n_snr)
     #t_free_arr = sample_t_free(n_snr)
     t_free_arr = np.full((n_snr,), fixed_t_free())
+    Snu1GHz_pk_arr = sample_Snu1GHz_pk(n_snr, si=si_arr, d=lbd_arr[:, 2]),
     
     snr_list = []
-    
     for i in (tqdm(range(n_snr)) if verbose >= 1 else range(n_snr)):
-    
-        Snu6p3GHz_pk = L_pk_arr[i] / (4*np.pi*(lbd_arr[i, 2]*kpc)**2) / sec**2 / Jy # [Jy]
-        si = si_arr[i]
-        Snu1GHz_pk = Snu6p3GHz_pk * np.sqrt(4*10) ** (si)
         
         snr = SNR(
             ID = f'Graveyard-{i}',
@@ -213,8 +217,8 @@ def sample_graveyard_snrs(t_cutoff=100000, verbose=1):
             t_now = t_now_arr[i],
             t_free = t_free_arr[i],
             t_pk = t_pk_arr[i],
-            Snu1GHz_pk = Snu1GHz_pk,
-            si = si,
+            Snu1GHz_pk = Snu1GHz_pk_arr[i],
+            si = si_arr[i],
         )
         snr.build(rho_DM=rho_NFW, use_lightcurve=True, integrate_method='trapz')
         snr_list.append(snr)
