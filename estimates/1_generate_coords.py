@@ -1,6 +1,7 @@
 import sys
 sys.path.append("..")
 
+import os
 import pickle
 from tqdm import tqdm
 
@@ -76,13 +77,15 @@ def generate_coords(
 
 if __name__ == "__main__":
     
-    config_name = 'CHIME-nnu30-nra3-ndec3'
+    config_name = 'HIRAX-1024-nnu30-nra3-ndec3'
     config = config_dict[config_name]
+    
+    os.makedirs(f"{intermediates_dir}/{config_name}/coords", exist_ok=True)
     
     for i_nu in tqdm(range(len(config['nu_arr']))):
         for i_ra in range(config['n_ra_grid_shift']):
             for i_dec in range(config['n_dec_grid_shift']):
                 generate_coords(
                     i_nu=i_nu, i_ra_grid_shift=i_ra, i_dec_grid_shift=i_dec,
-                    save_dir=f'{intermediates_dir}/{config_name}/coords', **config
+                    save_dir=f"{intermediates_dir}/{config_name}/coords", **config
                 )

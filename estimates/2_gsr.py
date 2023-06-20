@@ -10,6 +10,7 @@ import h5py
 import numpy as np
 import healpy as hp
 from astropy.io import fits
+import jax.numpy as jnp
 
 from config import config_dict, intermediates_dir
 from aatw.units_constants import *
@@ -115,8 +116,12 @@ def gsr(run_dir, naive_gegenschein=False, field_model=...,
 
 if __name__ == "__main__":
     
-    config_name = 'CHIME-nnu30-nra3-ndec3'
+    config_name = 'HIRAX-1024-nnu30-nra3-ndec3'
     config = config_dict[config_name]
+    
+    os.makedirs(f"{intermediates_dir}/{config_name}/gsr_JF", exist_ok=True)
+    os.makedirs(f"{intermediates_dir}/{config_name}/bkg", exist_ok=True)
+    os.makedirs(f"{intermediates_dir}/{config_name}/exposure", exist_ok=True)
     
     for i_nu in tqdm(range(len(config['nu_arr']))):
         for i_ra in range(config['n_ra_grid_shift']):

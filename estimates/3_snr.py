@@ -1,10 +1,12 @@
 import sys
 sys.path.append("..")
 
+import os
 from tqdm import tqdm
 import pickle
 
 import numpy as np
+import jax.numpy as jnp
 
 from config import config_dict, intermediates_dir
 
@@ -97,14 +99,14 @@ def snr(
         
 if __name__ == "__main__":
     
-    config_name = 'CHIME-nnu30-nra3-ndec3'
+    config_name = 'HIRAX-1024-nnu30-nra3-ndec3'
     config = config_dict[config_name]
     
-    snr_population = 'snr-partialinfo'
+    snr_population = 'snr-graveyard'
     
-    if snr_population == 'snr-fullinfo':
-        valid_snr_list = load_snr_list("../data/SNR/snrlist_none.json")
-        snr_list_realizations = [valid_snr_list]
+    if snr_population.startswith('snr-fullinfo'):
+        snr_list = load_snr_list(f"../outputs/snr/{snr_population}.json")
+        snr_list_samples = [snr_list]
         
     elif snr_population == 'snr-partialinfo':
         snr_list_samples = []
@@ -114,14 +116,16 @@ if __name__ == "__main__":
             )
     
     elif snr_population == 'snr-graveyard':
-        snr_list_realizations = []
+        snr_list_samples = []
         for i_r in tqdm(range(100)):
-            snr_list_realizations.append(
-                load_snr_list(f"../data/SNR/graveyard_realizations/graveyard_tc2e5_{i_r}.json")
+            snr_list_samples.append(
+                load_snr_list(f"../outputs/snr/graveyard_samples/graveyard_tc2e5_{i_r}.json")
             )
     
     else:
         raise ValueError(snr_population)
+    
+    os.makedirs(f'{intermediates_dir}/{config_name}/{snr_population}', exist_ok=True)
     
     pbar = tqdm(total=len(config['nu_arr']) * config['n_ra_grid_shift'] * config['n_dec_grid_shift'])
     for i_nu in range(len(config['nu_arr'])):
@@ -132,7 +136,7 @@ if __name__ == "__main__":
                     run_dir=f'{intermediates_dir}/{config_name}',
                     snr_population=snr_population,
                     snr_list_realizations=snr_list_samples,
-                    #Sgfgnu1GHz_threshold=1e-8, # [Jy]
+                    Sgfgnu1GHz_threshold=1e-8, # [Jy]
                     i_nu=i_nu, i_ra_grid_shift=i_ra, i_dec_grid_shift=i_dec, **config
                 )
                 

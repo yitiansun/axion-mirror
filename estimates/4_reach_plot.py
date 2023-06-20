@@ -1,6 +1,7 @@
 import sys
 sys.path.append("..")
 
+import os
 from tqdm import tqdm
 import h5py
 import numpy as np
@@ -13,13 +14,13 @@ from aatw.spectral import dnu
 if __name__=="__main__":
     
     #===== plot config =====
-    include_sources = ['gsr', 'snr-fullinfo', 'snr-partialinfo', 'snr-graveyard']
+    include_sources = ['snr-graveyard', 'snr-fullinfo-lightcurve', 'snr-partialinfo', 'gsr']
     plot_name = 'total'
     average_over_grid_shift = True
     
     
     #===== run config =====
-    config_name = 'CHIME-nnu30-nra3-ndec3'
+    config_name = 'HIRAX-1024-nnu30-nra3-ndec3'
     config = config_dict[config_name]
     
     
@@ -47,8 +48,8 @@ if __name__=="__main__":
                 if 'gsr' in include_sources:
                     sig_samples += np.load(f'{prefix}/gsr_JF/gsr-{postfix}.npy')[np.newaxis, ...]
 
-                for snr_key in ['snr-fullinfo', 'snr-partialinfo', 'snr-graveyard']:
-                    if snr_key in include_sources:
+                for snr_key in include_sources:
+                    if snr_key.startswith('snr'):
                         sig_samples += np.load(f'{prefix}/{snr_key}/snr-{postfix}.npy')
                 
                 SNratio_samples_map = (sig_samples / bkg) * np.sqrt(
@@ -61,6 +62,8 @@ if __name__=="__main__":
     if average_over_grid_shift:
         g_arr_samples = np.mean(g_arr_samples, axis=(0, 1)) # (sample, nu)
         
-    with h5py.File(f"../outputs/plot_data/{plot_name}.h5", 'w') as hf:
+    os.makedirs(f"../outputs/plot_data/{config_name}", exist_ok=True)
+    
+    with h5py.File(f"../outputs/plot_data/{config_name}/{plot_name}.h5", 'w') as hf:
         hf.create_dataset('nu', data=nu_arr)
         hf.create_dataset('gagg', data=g_arr_samples)
