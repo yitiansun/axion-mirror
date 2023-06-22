@@ -2,6 +2,10 @@
 
 ![](outputs/graveyard_samples.gif)
 
+<a target="_blank" href="https://colab.research.google.com/github/yitiansun/axions-against-the-world">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
+
 ## Using Colaboratory
 
 - Copy content of this repository to Google Drive. You can do this by first cloning the repository then uploading/syncing to Google Drive.
