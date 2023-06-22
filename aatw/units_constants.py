@@ -35,3 +35,4 @@ sigmad_over_c = 116/300000 # [1] | (km/s) / (km/s)
 #===== this project =====
 
 gagg_CAST = 6.6e-11 * invGeV # [cm^-2 MHz^-2 g^-1]
+nu_haslam = 408 # [MHz]
