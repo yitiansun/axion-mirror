@@ -1,15 +1,13 @@
 """Functions for spectrum"""
 
 import sys
-sys.path.append('..')
+sys.path.append("..")
 
-import jax.numpy as jnp
-from jax import jit, vmap
-
-from aatw.units_constants import *
+from aatw.units_constants import hbar, c0, sigmad_over_c, gagg_CAST
 
 
 fDelta = 0.721 # frequency domain cut associated with the above bandwidth (2.17)
+
 def dnu(nu):
     """[MHz]([MHz]). Input can be a vector."""
     return 2.17 * sigmad_over_c * nu

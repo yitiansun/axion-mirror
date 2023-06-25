@@ -32,14 +32,6 @@ def snr(
     dec_grid = coords_dict['dec_grid']
     radec_flat = coords_dict['radec_flat']
     radec_shape = coords_dict['radec_shape']
-    l_grid = coords_dict['l_grid']
-    b_grid = coords_dict['b_grid']
-    lb_flat = jnp.asarray(coords_dict['lb_flat'])
-    
-    anti_l_grid = l_grid + np.pi
-    anti_l_grid = np.where(anti_l_grid > 2*np.pi, anti_l_grid - 2*np.pi, anti_l_grid)
-    anti_b_grid = - b_grid
-    anti_lb_flat = np.stack([anti_l_grid.ravel(), anti_b_grid.ravel()], axis=-1)
     
     
     #========== Add snr to map ==========

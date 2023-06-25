@@ -40,8 +40,8 @@ def antipodal_lb_map(lb_map):
     return jnp.roll(jnp.flipud(lb_map), int(lb_map.shape[1]/2), axis=1)
 
 
-# def padded_interpolator(l, b, m):
-#     """Interpolator used to upsample l, b maps."""
+# def interpolate_padded(m, l, b, lb_s):
+    
 #     padded_b = np.zeros((len(b)+2,))
 #     padded_b[1:-1] = b
 #     padded_b[0] = b[0] - (b[1]-b[0])
@@ -59,14 +59,19 @@ def antipodal_lb_map(lb_map):
 #     padded_m[:,0] = padded_m[:,-2]
 #     padded_m[:,-1] = padded_m[:,1]
     
-#     return interpolate.interp2d(padded_l, padded_b, padded_m)
+#     return interp2d_vmap(
+#         jnp.asarray(padded_m),
+#         jnp.asarray(padded_l),
+#         jnp.asarray(padded_b),
+#         lb_s
+#     )
 
 
 def interp2d(f, x0, x1, xv):
     """Interpolates f(x) at values in xvs. Does not do bound checks.
     f : (n>=2 D) array of function value.
-    x0 : 1D array of input value, corresponding to first dimension of f.
-    x1 : 1D array of input value, corresponding to second dimension of f.
+    x0 : 1D array of input value, corresponding to axis 0 of f.
+    x1 : 1D array of input value, corresponding to axis 1 of f.
     xv : [x0, x1] values to interpolate.
     """
     xv0, xv1 = xv
@@ -87,8 +92,18 @@ def interp2d(f, x0, x1, xv):
 interp2d_vmap = jit(vmap(interp2d, in_axes=(None, None, None, 0)))
 
 
-def interpolate_padded(m, l, b, lb_s):
+def pad_mbl(m, b, l, method='nearest'):
+    """Pad m, b (first dim), l (second dim) by 1 extra grid point at each end.
     
+    Args:
+        m (2D np.ndarray) : map
+        b (1D np.ndarray) : abscissa for axis 0
+        l (1D np.ndarray) : abscissa for axis 1
+        method ({'nearest'}) : padding method
+        
+    Return:
+        (padded_m, padded_b, padded_l)
+    """
     padded_b = np.zeros((len(b)+2,))
     padded_b[1:-1] = b
     padded_b[0] = b[0] - (b[1]-b[0])
@@ -101,17 +116,16 @@ def interpolate_padded(m, l, b, lb_s):
     
     padded_m = np.zeros((len(b)+2,len(l)+2))
     padded_m[1:-1, 1:-1] = m
-    padded_m[0,1:-1] = m[-1]
-    padded_m[-1,1:-1] = m[0]
-    padded_m[:,0] = padded_m[:,-2]
-    padded_m[:,-1] = padded_m[:,1]
     
-    return interp2d_vmap(
-        jnp.asarray(padded_m),
-        jnp.asarray(padded_l),
-        jnp.asarray(padded_b),
-        lb_s
-    )
+    if method == 'nearest':
+        padded_m[0,1:-1] = m[0]
+        padded_m[-1,1:-1] = m[-1]
+        padded_m[:,0] = padded_m[:,1]
+        padded_m[:,-1] = padded_m[:,-2]
+    else:
+        raise NotImplementedError
+        
+    return padded_m, padded_b, padded_l
 
 
 #===== plotting =====
