@@ -19,7 +19,7 @@ from aatw.spectral import dnu, prefac
 from aatw.map_utils import pad_mbl
 
 
-def gsr(run_dir, field_model=..., telescope=..., nu_arr=...,
+def gsr(run_dir, remove_GCantiGC=True, field_model=..., telescope=..., nu_arr=...,
         i_nu=..., i_ra_grid_shift=..., i_dec_grid_shift=..., **kwargs):
     """Make signal and background maps for Galactic Synchrotron Radiation (GSR)"""
     
@@ -30,6 +30,8 @@ def gsr(run_dir, field_model=..., telescope=..., nu_arr=...,
     coords_dict = pickle.load(open(f'{run_dir}/coords/coords-{subrun_postfix}.p', 'rb'))
     ra_s = coords_dict['ra_s']
     dec_s = coords_dict['dec_s']
+    ra_edges = coords_dict['ra_edges']
+    dec_edges = coords_dict['dec_edges']
     ra_grid = coords_dict['ra_grid']
     dec_grid = coords_dict['dec_grid']
     radec_flat = coords_dict['radec_flat']
@@ -64,7 +66,26 @@ def gsr(run_dir, field_model=..., telescope=..., nu_arr=...,
         bl_flat
     ).reshape(radec_shape)
     
-    sig_temp_map *= (nu/nu_haslam) ** beta * (prefac(nu)/prefac(nu_haslam))
+    sig_temp_map = np.array(sig_temp_map) * (nu/nu_haslam)**beta * (prefac(nu)/prefac(nu_haslam))
+    
+    #----- remove GC pixel and anti-GC pixel -----
+    if remove_GCantiGC:
+        coord_GC = SkyCoord(l=0*u.rad, b=0*u.rad, frame='galactic')
+        ra_GC = coord_GC.icrs.ra.rad
+        dec_GC = coord_GC.icrs.dec.rad
+
+        i_ra_GC = np.searchsorted(ra_edges, ra_GC) - 1 # v_edges[i-1] < v < v_edges[i]
+        i_dec_GC = np.searchsorted(dec_edges, dec_GC) - 1
+        if 0 < i_dec_GC and i_dec_GC < len(dec_edges): # checking only DEC because RA must be in range
+            sig_temp_map[i_dec_GC, i_ra_GC] = 0
+
+        ra_antiGC = ra_GC+np.pi if ra_GC < np.pi else ra_GC-np.pi
+        dec_antiGC = - dec_GC
+
+        i_ra_antiGC = np.searchsorted(ra_edges, ra_antiGC) - 1 # v_edges[i-1] < v < v_edges[i]
+        i_dec_antiGC = np.searchsorted(dec_edges, dec_antiGC) - 1
+        if 0 < i_dec_antiGC and i_dec_antiGC < len(dec_edges): # checking only DEC because RA must be in range
+            sig_temp_map[i_dec_antiGC, i_ra_antiGC] = 0
 
     #========== Exposure ==========
     ra_beam_size = (c0 / nu) / telescope.primary_beam_baseline
@@ -78,6 +99,10 @@ def gsr(run_dir, field_model=..., telescope=..., nu_arr=...,
     eta   = telescope.eta(nu)   if callable(telescope.eta)   else telescope.eta
     bkg_temp_map = haslam_ds_map + T_sys / eta # [K/eta]
 
+    #========== Save ==========
+    os.makedirs(f"{run_dir}/gsr_{field_model}", exist_ok=True)
+    os.makedirs(f"{run_dir}/bkg", exist_ok=True)
+    os.makedirs(f"{run_dir}/exposure", exist_ok=True)
     np.save(f'{run_dir}/gsr_{field_model}/gsr-{subrun_postfix}.npy', sig_temp_map)
     np.save(f'{run_dir}/bkg/bkg-{subrun_postfix}.npy', bkg_temp_map)
     np.save(f'{run_dir}/exposure/exposure-{subrun_postfix}.npy', exposure_map)
@@ -85,12 +110,8 @@ def gsr(run_dir, field_model=..., telescope=..., nu_arr=...,
 
 if __name__ == "__main__":
     
-    config_name = 'HIRAX-1024-nnu30-nra3-ndec3'
+    config_name = 'CHIME-nnu30-nra3-ndec3'
     config = config_dict[config_name]
-    
-    os.makedirs(f"{intermediates_dir}/{config_name}/gsr_JF", exist_ok=True)
-    os.makedirs(f"{intermediates_dir}/{config_name}/bkg", exist_ok=True)
-    os.makedirs(f"{intermediates_dir}/{config_name}/exposure", exist_ok=True)
     
     for i_nu in tqdm(range(len(config['nu_arr']))):
         for i_ra in range(config['n_ra_grid_shift']):
