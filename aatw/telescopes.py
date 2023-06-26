@@ -104,3 +104,16 @@ HIRAX_1024 = Telescope(
     T_sys = 50,
     t_obs_days = 2 * 365.25,
 )
+
+HERA = Telescope(
+    name = 'HERA',
+    nu_min = 50, nu_max = 250,
+    size_ra = 18 * 14 * 100, size_dec = 18 * 14 * 100,
+    ra_max = 2*np.pi, ra_min = 0,
+    dec_max = np.deg2rad(0), dec_min = np.deg2rad(-60),
+    dec = np.deg2rad(-30.72),
+    primary_beam_baseline = 14 * 100,
+    eta = 1,
+    T_sys = 35,
+    t_obs_days = 2 * 365.25,
+)
