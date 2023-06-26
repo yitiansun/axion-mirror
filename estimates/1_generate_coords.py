@@ -77,7 +77,7 @@ def generate_coords(
 
 if __name__ == "__main__":
     
-    config_name = 'HIRAX-1024-nnu30-nra3-ndec3'
+    config_name = 'HERA-nnu30-nra3-ndec3'
     config = config_dict[config_name]
     
     os.makedirs(f"{intermediates_dir}/{config_name}/coords", exist_ok=True)

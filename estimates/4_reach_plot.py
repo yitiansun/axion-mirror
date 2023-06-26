@@ -20,7 +20,7 @@ if __name__=="__main__":
     
     
     #===== run config =====
-    config_name = 'HIRAX-1024-nnu30-nra3-ndec3'
+    config_name = 'HERA-nnu30-nra3-ndec3'
     config = config_dict[config_name]
     
     

@@ -40,31 +40,31 @@ def antipodal_lb_map(lb_map):
     return jnp.roll(jnp.flipud(lb_map), int(lb_map.shape[1]/2), axis=1)
 
 
-# def interpolate_padded(m, l, b, lb_s):
+def interpolate_padded(m, l, b, lb_s):
+  
+    padded_b = np.zeros((len(b)+2,))
+    padded_b[1:-1] = b
+    padded_b[0] = b[0] - (b[1]-b[0])
+    padded_b[-1] = b[-1] + (b[-1]-b[-2])
     
-#     padded_b = np.zeros((len(b)+2,))
-#     padded_b[1:-1] = b
-#     padded_b[0] = b[0] - (b[1]-b[0])
-#     padded_b[-1] = b[-1] + (b[-1]-b[-2])
+    padded_l = np.zeros((len(l)+2,))
+    padded_l[1:-1] = l
+    padded_l[0] = l[0] - (l[1]-l[0])
+    padded_l[-1] = l[-1] + (l[-1]-l[-2])
     
-#     padded_l = np.zeros((len(l)+2,))
-#     padded_l[1:-1] = l
-#     padded_l[0] = l[0] - (l[1]-l[0])
-#     padded_l[-1] = l[-1] + (l[-1]-l[-2])
+    padded_m = np.zeros((len(b)+2,len(l)+2))
+    padded_m[1:-1, 1:-1] = m
+    padded_m[0,1:-1] = m[-1]
+    padded_m[-1,1:-1] = m[0]
+    padded_m[:,0] = padded_m[:,-2]
+    padded_m[:,-1] = padded_m[:,1]
     
-#     padded_m = np.zeros((len(b)+2,len(l)+2))
-#     padded_m[1:-1, 1:-1] = m
-#     padded_m[0,1:-1] = m[-1]
-#     padded_m[-1,1:-1] = m[0]
-#     padded_m[:,0] = padded_m[:,-2]
-#     padded_m[:,-1] = padded_m[:,1]
-    
-#     return interp2d_vmap(
-#         jnp.asarray(padded_m),
-#         jnp.asarray(padded_l),
-#         jnp.asarray(padded_b),
-#         lb_s
-#     )
+    return interp2d_vmap(
+        jnp.asarray(padded_m),
+        jnp.asarray(padded_l),
+        jnp.asarray(padded_b),
+        lb_s
+    )
 
 
 def interp2d(f, x0, x1, xv):

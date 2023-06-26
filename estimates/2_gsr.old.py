@@ -116,7 +116,7 @@ def gsr(run_dir, naive_gegenschein=False, field_model=...,
 
 if __name__ == "__main__":
     
-    config_name = 'HIRAX-1024-nnu30-nra3-ndec3'
+    config_name = 'HERA-nnu30-nra3-ndec3'
     config = config_dict[config_name]
     
     os.makedirs(f"{intermediates_dir}/{config_name}/gsr_JF", exist_ok=True)
