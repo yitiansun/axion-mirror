@@ -225,7 +225,7 @@ class SNR:
         else:
             raise NotImplementedError(self.integrate_method)
             
-        self.nu_ref = 1000 # [MHz]
+        self.nu_ref = 1000. # [MHz]
         
         #========== gegenschein & front gegenschein ==========
         intgd = lambda xp: self.Snu_t(self.nu_ref, self.t(xp)) * rho_DM(np.maximum(self.Gr(xp), 1e-3)) * kpc
@@ -243,9 +243,10 @@ class SNR:
         imsz_intgd = lambda xp: self.image_sigma_at_fg(xp) * self.Snu_t(self.nu_ref, self.t_fg(xp)) * rho_DM(self.Gr_fg(xp)) * kpc
         imsz_intg = integrator(imsz_intgd, self.d, self.xp_fg(0)-EPSILON)
         self.image_sigma_fg = imsz_intg/intg # [arcmin]
-            
-        if np.any(np.isnan([self.Sgnu_ref, self.Sfgnu_ref, self.image_sigma, self.image_sigma_fg])):
-            raise ValueError(f'{self.ID}: integrated quantities contains NAN.')
+        
+        if not np.all(np.isfinite([self.Sgnu_ref, self.Sfgnu_ref, self.image_sigma, self.image_sigma_fg])):
+            print(self.Sgnu_ref, self.Sfgnu_ref, self.image_sigma, self.image_sigma_fg)
+            raise ValueError(f'{self.ID}: integrated quantities contains non-finite values.')
             
         
     def name(self):

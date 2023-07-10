@@ -13,6 +13,16 @@ def sample_from_pdf(pdf_func, start, end, num_samples, num_partition=1000):
     return inverse_cdf(np.random.uniform(0, 1, num_samples))
 
 
+def bounded_sample(sampler, lower_bound=None, upper_bound=None):
+    while True:
+        sample = sampler()
+        if lower_bound is not None and sample < lower_bound:
+            continue
+        if upper_bound is not None and sample > upper_bound:
+            continue
+        return sample
+
+
 def poisson_process(rate, total_time):
     """Returns the array of occurance time given rate and total time.
     [rate] * [total_time] = 1

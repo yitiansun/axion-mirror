@@ -7,9 +7,11 @@ from tqdm import tqdm
 
 import numpy as np
 from scipy import stats
+import jax.numpy as jnp
+from jax import vmap
 
 from aatw.units_constants import *
-from aatw.geometry import Glbd
+from aatw.geometry import Glbd, GCstz
 from aatw.stats import sample_from_pdf, poisson_process
 from aatw.nfw import rho_NFW
 from aatw.snr import SNR
@@ -72,7 +74,7 @@ def snr_stz_pdf_AKBVS(stz):
     z0 = 0.095 # [kpc]
     return np.exp(-s/s0) * np.exp(-np.abs(z)/z0)
 
-def sample_snr_stz_AKBVS(num_samples):
+def sample_snr_stz_AKBVS(num_samples=1):
     """SNR location sampler.
     From 1306.0559 Adams Kochanek Beacom Vagins Stanek.
     """
@@ -105,9 +107,20 @@ def snr_stz_pdf_G(stz):
     R_sun = 8.5 # [kpc]
     alpha = 1.09 # [1]
     beta = 3.87 # [1]
-    return (s/R_sun)**alpha * np.exp(-beta*(s-R_sun)/R_sun) * (np.abs(z) < 0.1)
+    return (s/R_sun)**alpha * jnp.exp(-beta*(s-R_sun)/R_sun) * (jnp.abs(z) < 0.1)
 
-def sample_snr_stz_G(num_samples):
+def snr_stz_pdf_G_softz(stz):
+    """Same as above except distribution on z is replace with exponential falloff.
+    This is for SNR distance sampling (to avoid sampling outside of the support of pdf).
+    """
+    s, t, z = stz[:,0], stz[:,1], stz[:,2]
+    
+    R_sun = 8.5 # [kpc]
+    alpha = 1.09 # [1]
+    beta = 3.87 # [1]
+    return (s/R_sun)**alpha * jnp.exp(-beta*(s-R_sun)/R_sun) * jnp.exp(-jnp.abs(z)/0.1)
+
+def sample_snr_stz_G(num_samples=1):
     """SNR location sampler.
     Following 1508.02931 Green.
     Take z to be Uniform(-0.1, 0.1).
@@ -126,10 +139,21 @@ def sample_snr_stz_G(num_samples):
                      t_samples,
                      z_samples], axis=-1)
 
+def sample_snr_d(stz_pdf_func, l, b, lowerbound, upperbound, num_samples=1):
+    """SNR distance sampler.
+    Given stz_pdf_func(callable), l [rad], b [rad], lowerbound [kpc], upperbound [kpc],
+    sample 1 instance of d [kpc].
+    """
+    def d_pdf(d):
+        stz = GCstz(jnp.array([[l, b, d]]))
+        return stz_pdf_func(stz)[0]
+    
+    return sample_from_pdf(vmap(d_pdf), lowerbound, upperbound, num_samples)
+
 
 #===== spectral index =====
 
-def sample_si(num_samples):
+def sample_si(num_samples=1):
     """See ../notebooks/snr_graveyard.ipynb"""
     si_skewness, si_loc, si_scale = -1.2377486349155773, 0.5991927451179504, 0.1894835347218209
     return stats.skewnorm.rvs(si_skewness, loc=si_loc, scale=si_scale, size=num_samples)
@@ -137,39 +161,47 @@ def sample_si(num_samples):
 
 #===== size =====
 
-def sample_size_1kyr(num_samples):
+def sample_size_1kyr(num_samples=1):
     """See ../notebooks/snr_graveyard.ipynb"""
     size_skewness, size_loc, size_scale = 9.383925762403216, 0.0036672822153501466, 0.010441241123269699
     return stats.skewnorm.rvs(size_skewness, loc=size_loc, scale=size_scale, size=num_samples)
 
-def sample_size_now(num_samples, t_now=...):
+def sample_size_now(num_samples=1, t_now=...):
     """t_now in [yr], can be a vector."""
     return sample_size_1kyr(num_samples) * (1000/t_now)**0.4
 
 
 #===== lightcurve =====
 
-def sample_t_pk(num_samples):
+def sample_t_pk(num_samples=1):
     
     t_pk_mean = 50 # [day]
     t_pk_stddex = 0.9 # [1]
     return 10**(stats.norm.rvs(loc=np.log10(t_pk_mean), scale=t_pk_stddex, size=num_samples)) / 365.25 # [yr]
 
-def sample_L_pk(num_samples):
+def sample_L_pk(num_samples=1):
     
     L_pk_mean = 3e25 # [erg/s/Hz]
     L_pk_stddex = 1.5 # [1]
     return 10**(stats.norm.rvs(loc=np.log10(L_pk_mean), scale=L_pk_stddex, size=num_samples))
 
-def sample_Snu1GHz_pk(num_samples, si=..., d=...):
+def sample_Snu1GHz_pk(num_samples=1, si=..., d=...):
     """d in [kpc]. d and si can be vectors."""
     Snu6p3GHz_pk = sample_L_pk(num_samples) / (4*np.pi*(d*kpc)**2) / sec**2 / Jy # [Jy]
     return Snu6p3GHz_pk * np.sqrt(4*10) ** si
     
     
+#===== t_now (age) =====
+
+def sample_t_now(num_samples=1):
+    """See ../notebooks/snr_graveyard.ipynb"""
+    log10age_skewness, log10age_loc, log10age_scale = 0.9475698171302935, 3.5585998647723156, 0.6187394571802789
+    return 10**stats.skewnorm.rvs(log10age_skewness, loc=log10age_loc, scale=log10age_scale, size=num_samples)
+
+
 #===== t_free =====
 
-def sample_t_free(num_samples):
+def sample_t_free(num_samples=1):
     """See ../notebooks/snr_graveyard.ipynb"""
     t_free_skewness, t_free_loc, t_free_scale = -0.4409101842885288, 2.322143632416538, 0.8307012289498359
     return 10**stats.skewnorm.rvs(t_free_skewness, loc=t_free_loc, scale=t_free_scale, size=num_samples)

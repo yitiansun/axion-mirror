@@ -3,6 +3,7 @@
 .tmp.driveupload/
 outputs/snr/graveyard_samples/
 outputs/snr/partialinfo_samples/
+outputs/snr/fullinfo_samples/
 outputs/plot_graveyard_samples/
 #========================
 
