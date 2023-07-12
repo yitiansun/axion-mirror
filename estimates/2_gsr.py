@@ -10,13 +10,15 @@ import h5py
 import numpy as np
 import healpy as hp
 from astropy.io import fits
+from astropy.coordinates import SkyCoord
+import astropy.units as u
 import jax.numpy as jnp
 
 from config import config_dict, intermediates_dir
 from aatw.units_constants import *
 from aatw.nfw import rho_integral, rho_integral_ref
 from aatw.spectral import dnu, prefac
-from aatw.map_utils import pad_mbl
+from aatw.map_utils import pad_mbl, interp2d_vmap
 
 
 def gsr(run_dir, remove_GCantiGC=True, field_model=..., telescope=..., nu_arr=...,
@@ -76,7 +78,7 @@ def gsr(run_dir, remove_GCantiGC=True, field_model=..., telescope=..., nu_arr=..
 
         i_ra_GC = np.searchsorted(ra_edges, ra_GC) - 1 # v_edges[i-1] < v < v_edges[i]
         i_dec_GC = np.searchsorted(dec_edges, dec_GC) - 1
-        if 0 < i_dec_GC and i_dec_GC < len(dec_edges): # checking only DEC because RA must be in range
+        if 0 < i_dec_GC and i_dec_GC < len(dec_s): # checking only DEC because RA must be in range
             sig_temp_map[i_dec_GC, i_ra_GC] = 0
 
         ra_antiGC = ra_GC+np.pi if ra_GC < np.pi else ra_GC-np.pi
@@ -84,7 +86,7 @@ def gsr(run_dir, remove_GCantiGC=True, field_model=..., telescope=..., nu_arr=..
 
         i_ra_antiGC = np.searchsorted(ra_edges, ra_antiGC) - 1 # v_edges[i-1] < v < v_edges[i]
         i_dec_antiGC = np.searchsorted(dec_edges, dec_antiGC) - 1
-        if 0 < i_dec_antiGC and i_dec_antiGC < len(dec_edges): # checking only DEC because RA must be in range
+        if 0 < i_dec_antiGC and i_dec_antiGC < len(dec_s): # checking only DEC because RA must be in range
             sig_temp_map[i_dec_antiGC, i_ra_antiGC] = 0
 
     #========== Exposure ==========
@@ -106,17 +108,17 @@ def gsr(run_dir, remove_GCantiGC=True, field_model=..., telescope=..., nu_arr=..
     np.save(f'{run_dir}/gsr_{field_model}/gsr-{subrun_postfix}.npy', sig_temp_map)
     np.save(f'{run_dir}/bkg/bkg-{subrun_postfix}.npy', bkg_temp_map)
     np.save(f'{run_dir}/exposure/exposure-{subrun_postfix}.npy', exposure_map)
-      
+    
 
 if __name__ == "__main__":
     
-    config_name = 'CHIME-nnu30-nra3-ndec3'
+    config_name = 'HIRAX-1024-nnu30-nra3-ndec3'
     config = config_dict[config_name]
     
     for i_nu in tqdm(range(len(config['nu_arr']))):
         for i_ra in range(config['n_ra_grid_shift']):
             for i_dec in range(config['n_dec_grid_shift']):
                 gsr(
-                    run_dir=f'{intermediates_dir}/{config_name}', field_model='JF',
+                    run_dir=f'{intermediates_dir}/{config_name}', field_model='JF', remove_GCantiGC=True,
                     i_nu=i_nu, i_ra_grid_shift=i_ra, i_dec_grid_shift=i_dec, **config
                 )

@@ -1,6 +1,7 @@
 #===== This project =====
 **/.DS_Store
 .tmp.driveupload/
+estimates/slurm_outputs/
 outputs/snr/graveyard_samples/
 outputs/snr/partialinfo_samples/
 outputs/snr/fullinfo_samples/

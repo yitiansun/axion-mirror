@@ -114,6 +114,6 @@ HERA = Telescope(
     dec = np.deg2rad(-30.72),
     primary_beam_baseline = 14 * 100,
     eta = 1,
-    T_sys = 35,
+    T_sys = 100,
     t_obs_days = 2 * 365.25,
 )

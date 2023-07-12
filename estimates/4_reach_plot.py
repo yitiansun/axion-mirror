@@ -14,13 +14,13 @@ from aatw.spectral import dnu
 if __name__=="__main__":
     
     #===== plot config =====
-    include_sources = ['snr-graveyard', 'snr-fullinfo-lightcurve', 'snr-partialinfo', 'gsr']
-    plot_name = 'total'
+    include_sources = ['gsr']
+    plot_name = 'gsr'
     average_over_grid_shift = True
     
     
     #===== run config =====
-    config_name = 'HERA-nnu30-nra3-ndec3'
+    config_name = 'CHIME-nnu30-nra3-ndec3'
     config = config_dict[config_name]
     
     
@@ -30,7 +30,7 @@ if __name__=="__main__":
     n_nu = len(nu_arr)
     n_ra = config['n_ra_grid_shift']
     n_dec = config['n_dec_grid_shift']
-    n_sample = 100 if ('snr-graveyard' in include_sources or 'snr-partialinfo' in include_sources) else 1
+    n_sample = 100 if 'snr' in include_sources else 1
     
     g_arr_samples = np.zeros((n_ra, n_dec, n_sample, n_nu))
     

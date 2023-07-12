@@ -1,15 +1,15 @@
-import sys
-sys.path.append("..")
-
 import os
+import sys
 from tqdm import tqdm
 import pickle
+import argparse
 
 import numpy as np
 import jax.numpy as jnp
 
 from config import config_dict, intermediates_dir
 
+sys.path.append("..")
 from aatw.units_constants import *
 from aatw.snr import load_snr_list, add_image_to_map
 
@@ -86,51 +86,43 @@ def snr(
         sig_temp_map_snr_realizations.append(sig_temp_map_snr.copy())
         
     sig_temp_map_snr_realizations = np.array(sig_temp_map_snr_realizations)
-    np.save(f'{run_dir}/{snr_population}/snr-{subrun_postfix}.npy', sig_temp_map_snr_realizations)
+    np.save(f'{run_dir}/snr-{snr_population}/snr-{subrun_postfix}.npy', sig_temp_map_snr_realizations)
 
         
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, required=True, help='config')
+    parser.add_argument('--population', type=str, required=True, help='{fullinfo, partialinfo, graveyard}')
+    parser.add_argument('--use_tqdm', action='store_true', help='Use tqdm if flag is set')
+    args = parser.parse_args()
     
-    config_name = 'HERA-nnu30-nra3-ndec3'
-    config = config_dict[config_name]
+    config = config_dict[args.config]
     
-    snr_population = 'snr-graveyard'
+    snr_list_samples = []
+    for i_sample in tqdm(range(100)):
+        snr_list_samples.append(
+            load_snr_list(f"../outputs/snr/{args.population}_samples/{args.population}_{i_sample}.json")
+        )
     
-    if snr_population.startswith('snr-fullinfo'):
-        snr_list = load_snr_list(f"../outputs/snr/{snr_population}.json")
-        snr_list_samples = [snr_list]
-        
-    elif snr_population == 'snr-partialinfo':
-        snr_list_samples = []
-        for i_sample in tqdm(range(100)):
-            snr_list_samples.append(
-                load_snr_list(f"../outputs/snr/partialinfo_samples/partialinfo_{i_sample}.json")
-            )
-    
-    elif snr_population == 'snr-graveyard':
-        snr_list_samples = []
-        for i_r in tqdm(range(100)):
-            snr_list_samples.append(
-                load_snr_list(f"../outputs/snr/graveyard_samples/graveyard_tc2e5_{i_r}.json")
-            )
-    
-    else:
-        raise ValueError(snr_population)
-    
-    os.makedirs(f'{intermediates_dir}/{config_name}/{snr_population}', exist_ok=True)
-    
-    pbar = tqdm(total=len(config['nu_arr']) * config['n_ra_grid_shift'] * config['n_dec_grid_shift'])
+    os.makedirs(f'{intermediates_dir}/{args.config}/snr-{args.population}', exist_ok=True)
+
+    if args.use_tqdm:
+        pbar = tqdm(total=len(config['nu_arr']) * config['n_ra_grid_shift'] * config['n_dec_grid_shift'])
     for i_nu in range(len(config['nu_arr'])):
         for i_ra in range(config['n_ra_grid_shift']):
             for i_dec in range(config['n_dec_grid_shift']):
                 
                 snr(
-                    run_dir=f'{intermediates_dir}/{config_name}',
-                    snr_population=snr_population,
+                    run_dir=f'{intermediates_dir}/{args.config}',
+                    snr_population=args.population,
                     snr_list_realizations=snr_list_samples,
                     Sgfgnu1GHz_threshold=1e-8, # [Jy]
                     i_nu=i_nu, i_ra_grid_shift=i_ra, i_dec_grid_shift=i_dec, **config
                 )
                 
-                pbar.update()
+                if args.use_tqdm:
+                    pbar.update()
+                else:
+                    print(f'i_nu={i_nu}, i_ra={i_ra}, i_dec={i_dec}')
         
