@@ -45,7 +45,7 @@ def gsr(run_dir, remove_GCantiGC=True, field_model=..., telescope=..., nu_arr=..
     nu_haslam = 408 # [MHz]
     beta = -2.5
     # destriped (not desourced) map for background
-    haslam_ds_map_hp = hp.read_map('../data/haslam_maps/haslam408_ds_Remazeilles2014.fits')
+    haslam_ds_map_hp = hp.read_map('../data/gsr/haslam408_ds_Remazeilles2014.fits')
     haslam_ds_map_hp *= (nu/nu_haslam) ** beta
     haslam_ds_map = hp.pixelfunc.get_interp_val(
         haslam_ds_map_hp, np.rad2deg(l_grid), np.rad2deg(b_grid), lonlat=True

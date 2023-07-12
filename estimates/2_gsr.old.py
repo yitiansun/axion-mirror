@@ -47,13 +47,13 @@ def gsr(run_dir, naive_gegenschein=False, field_model=...,
     nu_haslam = 408 # [MHz]
     beta = -2.55
     # destriped desourced
-    haslam_dsds_map_hp = hp.read_map('../data/haslam_maps/haslam408_dsds_Remazeilles2014.fits')
+    haslam_dsds_map_hp = hp.read_map('../data/gsr/haslam408_dsds_Remazeilles2014.fits')
     haslam_dsds_map_hp *= (nu/nu_haslam) ** beta
     haslam_dsds_map = hp.pixelfunc.get_interp_val(
         haslam_dsds_map_hp, np.rad2deg(l_grid), np.rad2deg(b_grid), lonlat=True
     )
     # destriped
-    haslam_ds_map_hp = hp.read_map('../data/haslam_maps/haslam408_ds_Remazeilles2014.fits')
+    haslam_ds_map_hp = hp.read_map('../data/gsr/haslam408_ds_Remazeilles2014.fits')
     haslam_ds_map_hp *= (nu/nu_haslam) ** beta
     haslam_ds_map = hp.pixelfunc.get_interp_val(
         haslam_ds_map_hp, np.rad2deg(l_grid), np.rad2deg(b_grid), lonlat=True
@@ -91,7 +91,7 @@ def gsr(run_dir, naive_gegenschein=False, field_model=...,
         #I_data = pickle.load(open(f'../data/galactic_models/I_data_{field_model}.dict', 'rb'))
         
         I_data = {}
-        with h5py.File(f'../data/galactic_models/I_data_{field_model}.h5', 'r') as hf:
+        with h5py.File(f'../data/gsr/I_data_{field_model}.h5', 'r') as hf:
             for k, item in hf.items():
                 I_data[k] = item[:]
         
