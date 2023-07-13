@@ -1,8 +1,5 @@
-import sys
-sys.path.append("..")
 import os
-os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
-
+import sys
 from tqdm import tqdm
 import pickle
 import h5py
@@ -13,10 +10,14 @@ from astropy.io import fits
 import jax.numpy as jnp
 
 from config import config_dict, intermediates_dir
+
+sys.path.append("..")
 from aatw.units_constants import *
 from aatw.nfw import rho_integral, rho_integral_ref
 from aatw.spectral import dnu, prefac
 from aatw.map_utils import interpolate_padded
+
+os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 
 
 def gsr(run_dir, naive_gegenschein=False, field_model=...,

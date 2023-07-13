@@ -1,9 +1,8 @@
-import sys
-sys.path.append("..")
-
 import os
-import pickle
+import sys
 from tqdm import tqdm
+import pickle
+import argparse
 
 import numpy as np
 import healpy as hp
@@ -11,8 +10,12 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 
 from config import config_dict, intermediates_dir
+
+sys.path.append("..")
 from aatw.map_utils import grid_edges
 from aatw.units_constants import *
+
+os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 
     
 def generate_coords(
@@ -77,15 +80,27 @@ def generate_coords(
 
 if __name__ == "__main__":
     
-    config_name = 'HERA-nnu30-nra3-ndec3'
-    config = config_dict[config_name]
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, required=True, help='config')
+    parser.add_argument('--use_tqdm', action='store_true', help='Use tqdm if flag is set')
+    args = parser.parse_args()
     
-    os.makedirs(f"{intermediates_dir}/{config_name}/coords", exist_ok=True)
+    config = config_dict[args.config]
     
-    for i_nu in tqdm(range(len(config['nu_arr']))):
+    os.makedirs(f"{intermediates_dir}/{args.config}/coords", exist_ok=True)
+    
+    if args.use_tqdm:
+        pbar = tqdm(total=len(config['nu_arr']) * config['n_ra_grid_shift'] * config['n_dec_grid_shift'])
+    for i_nu in range(len(config['nu_arr'])):
         for i_ra in range(config['n_ra_grid_shift']):
             for i_dec in range(config['n_dec_grid_shift']):
+                
                 generate_coords(
                     i_nu=i_nu, i_ra_grid_shift=i_ra, i_dec_grid_shift=i_dec,
-                    save_dir=f"{intermediates_dir}/{config_name}/coords", **config
+                    save_dir=f"{intermediates_dir}/{args.config}/coords", **config
                 )
+                
+                if args.use_tqdm:
+                    pbar.update()
+                else:
+                    print(f'i_nu={i_nu}, i_ra={i_ra}, i_dec={i_dec}')

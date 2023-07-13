@@ -1,11 +1,9 @@
-import sys
-sys.path.append("..")
 import os
-os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
-
+import sys
 from tqdm import tqdm
 import pickle
 import h5py
+import argparse
 
 import numpy as np
 import healpy as hp
@@ -15,10 +13,14 @@ import astropy.units as u
 import jax.numpy as jnp
 
 from config import config_dict, intermediates_dir
+
+sys.path.append("..")
 from aatw.units_constants import *
 from aatw.nfw import rho_integral, rho_integral_ref
 from aatw.spectral import dnu, prefac
 from aatw.map_utils import pad_mbl, interp2d_vmap
+
+os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 
 
 def gsr(run_dir, remove_GCantiGC=True, field_model=..., telescope=..., nu_arr=...,
@@ -112,13 +114,25 @@ def gsr(run_dir, remove_GCantiGC=True, field_model=..., telescope=..., nu_arr=..
 
 if __name__ == "__main__":
     
-    config_name = 'HIRAX-1024-nnu30-nra3-ndec3'
-    config = config_dict[config_name]
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, required=True, help='config')
+    parser.add_argument('--use_tqdm', action='store_true', help='Use tqdm if flag is set')
+    args = parser.parse_args()
     
-    for i_nu in tqdm(range(len(config['nu_arr']))):
+    config = config_dict[args.config]
+    
+    if args.use_tqdm:
+        pbar = tqdm(total=len(config['nu_arr']) * config['n_ra_grid_shift'] * config['n_dec_grid_shift'])
+    for i_nu in range(len(config['nu_arr'])):
         for i_ra in range(config['n_ra_grid_shift']):
             for i_dec in range(config['n_dec_grid_shift']):
+                
                 gsr(
-                    run_dir=f'{intermediates_dir}/{config_name}', field_model='JF', remove_GCantiGC=True,
+                    run_dir=f'{intermediates_dir}/{args.config}', field_model='JF', remove_GCantiGC=True,
                     i_nu=i_nu, i_ra_grid_shift=i_ra, i_dec_grid_shift=i_dec, **config
                 )
+                
+                if args.use_tqdm:
+                    pbar.update()
+                else:
+                    print(f'i_nu={i_nu}, i_ra={i_ra}, i_dec={i_dec}')

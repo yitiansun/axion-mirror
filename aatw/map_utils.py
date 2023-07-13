@@ -34,10 +34,9 @@ def grid_edges(pixel_size_func, a_min, a_max, a_mid=0.):
 
 #===== map functions =====
 
-def antipodal_lb_map(lb_map):
-    """Antipodal map of a lb_map with dimensions (~b, ~l)."""
-    assert lb_map.shape[1] % 2 == 0
-    return jnp.roll(jnp.flipud(lb_map), int(lb_map.shape[1]/2), axis=1)
+def antipodal_map(m):
+    """Antipodal map of a map with dimensions (~b, ~l)."""
+    return jnp.roll(jnp.flipud(m), int(m.shape[1]/2), axis=1)
 
 
 def interpolate_padded(m, l, b, lb_s):

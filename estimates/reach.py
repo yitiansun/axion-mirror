@@ -1,25 +1,26 @@
-import sys
-sys.path.append("..")
-
 import os
+import sys
 from tqdm import tqdm
 import h5py
 import numpy as np
 
 from config import config_dict, intermediates_dir
+
+sys.path.append("..")
 from aatw.units_constants import *
 from aatw.spectral import dnu
+
+os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 
 
 if __name__=="__main__":
     
-    #===== plot config =====
-    include_sources = ['gsr']
-    plot_name = 'gsr'
+    #===== config =====
+    include_sources = ['egrs']
+    plot_name = 'egrs'
     average_over_grid_shift = True
+    use_tqdm = True
     
-    
-    #===== run config =====
     config_name = 'CHIME-nnu30-nra3-ndec3'
     config = config_dict[config_name]
     
@@ -34,7 +35,9 @@ if __name__=="__main__":
     
     g_arr_samples = np.zeros((n_ra, n_dec, n_sample, n_nu))
     
-    for i_nu, nu in enumerate(tqdm(nu_arr)):
+    if use_tqdm:
+        pbar = tqdm(total=n_nu * n_ra * n_dec)
+    for i_nu, nu in enumerate(nu_arr):
         for i_ra in range(n_ra):
             for i_dec in range(n_dec):
                 
@@ -47,6 +50,9 @@ if __name__=="__main__":
                 
                 if 'gsr' in include_sources:
                     sig_samples += np.load(f'{prefix}/gsr_JF/gsr-{postfix}.npy')[np.newaxis, ...]
+                    
+                if 'egrs' in include_sources:
+                    sig_samples += np.load(f'{prefix}/egrs/egrs-{postfix}.npy')[np.newaxis, ...]
 
                 for snr_key in include_sources:
                     if snr_key.startswith('snr'):
@@ -58,6 +64,10 @@ if __name__=="__main__":
                 
                 SNratio_samples = np.sqrt(np.sum(SNratio_samples_map**2, axis=(1, 2))) # (sample,)
                 g_arr_samples[i_ra, i_dec, :, i_nu] = (gagg_CAST/invGeV) / np.sqrt(SNratio_samples) # [GeV^-1]
+                if use_tqdm:
+                    pbar.update()
+                else:
+                    print(f'i_nu={i_nu}, i_ra={i_ra}, i_dec={i_dec}')
     
     if average_over_grid_shift:
         g_arr_samples = np.mean(g_arr_samples, axis=(0, 1)) # (sample, nu)

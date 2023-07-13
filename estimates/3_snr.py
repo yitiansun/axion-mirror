@@ -13,6 +13,8 @@ sys.path.append("..")
 from aatw.units_constants import *
 from aatw.snr import load_snr_list, add_image_to_map
 
+os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
+
 
 def snr(
     run_dir, snr_population=..., snr_list_realizations=..., Sgfgnu1GHz_threshold=0.,
@@ -125,4 +127,3 @@ if __name__ == "__main__":
                     pbar.update()
                 else:
                     print(f'i_nu={i_nu}, i_ra={i_ra}, i_dec={i_dec}')
-        
