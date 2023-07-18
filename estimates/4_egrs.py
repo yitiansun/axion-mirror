@@ -16,6 +16,7 @@ import aatw.units_constants as uc
 from aatw.nfw import rho_integral
 from aatw.spectral import prefac
 from aatw.map_utils import antipodal_map
+from aatw.egrs import egrs_list_keuhr
 
 os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 
@@ -42,36 +43,20 @@ def egrs(run_dir, telescope=..., nu_arr=..., smooth=False,
     lb_flat = jnp.asarray(coords_dict['lb_flat'])
     
     #===== Extragalactic radio source map =====
-    with fits.open("../data/egrs/keuhr_catalog.fits") as hdul:
-        data = hdul[1].data
-        
+    egrs_list = egrs_list_keuhr()
     egrs_map = np.zeros_like(ra_grid)
-    prev_name = ''
 
-    for d in data:
-        if d['NAME'] == prev_name:
+    for egrs in egrs_list:
+        
+        if egrs.dec < dec_edges[0] or egrs.dec > dec_edges[-1]:
             continue
-        else:
-            prev_name = d['NAME']
-
-        if d['FUNCTION_TYPE'] == 'LIN':
-            Snu = 10**(d['COEFF_A'] + d['COEFF_B'] * np.log10(nu)) # [Jy]
-        # elif d['FUNCTION_TYPE'] == 'EXP':
-        #     Snu = 10**(d['COEFF_A'] + d['COEFF_B'] * np.log10(nu_haslam) + d['COEFF_C'] * np.exp(d['COEFF_D']) * np.log10(nu_haslam)) # [Jy]
-        else:
-            Snu = d['FLUX_RADIO']/1000 * (nu/d['FREQUENCY'])**d['SPECTRAL_INDEX'] # [Jy]
-            
-        dec = np.deg2rad(d['DEC']) # [rad]
-        ra = np.deg2rad(d['RA']) # [rad]
-        if dec < dec_edges[0] or dec > dec_edges[-1]:
-            continue
-        i_dec = np.searchsorted(dec_edges, dec) - 1
-        i_ra  = np.searchsorted(ra_edges, ra) - 1
+        i_dec = np.searchsorted(dec_edges, egrs.dec) - 1
+        i_ra  = np.searchsorted(ra_edges, egrs.ra) - 1
         delta_dec = np.diff(dec_edges)[i_dec]
         delta_ra  = np.diff(ra_edges)[i_ra]
         
-        pixel_area = delta_dec * delta_ra * np.cos(dec) # [rad^2]
-        I = Snu/pixel_area # [Jy sr^-1]
+        pixel_area = delta_dec * delta_ra * np.cos(egrs.dec) # [rad^2]
+        I = egrs.Snu(nu)/pixel_area # [Jy sr^-1]
         # I = 2 * nu^2 kb T / c0^2
         # [MHz^2 g sr^-1] = [MHz^2] [cm^2 MHz^2 g] [cm^-2 MHz^-2]
         T = I * uc.Jy / (2 * nu**2 * uc.kb / uc.c0**2)

@@ -1,16 +1,15 @@
 """Functions and class for supernova remnants (SNR)"""
 
 import sys
-sys.path.append('..')
-from dataclasses import dataclass, asdict
 import json
+from dataclasses import dataclass, asdict
 
 import numpy as np
 from scipy import integrate
 from astropy.coordinates import SkyCoord
-
 import jax.numpy as jnp
 
+sys.path.append("..")
 from aatw.units_constants import *
 from aatw.spectral import *
 from aatw.math import left_geom_trapz, right_geom_trapz
