@@ -96,7 +96,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, required=True, help='config')
     parser.add_argument('--population', type=str, required=True, help='{fullinfo, partialinfo, graveyard}')
-    parser.add_argument('--use_tqdm', action='store_true', help='Use tqdm if flag is set')
     args = parser.parse_args()
     
     config = config_dict[args.config]
@@ -109,8 +108,7 @@ if __name__ == "__main__":
     
     os.makedirs(f'{intermediates_dir}/{args.config}/snr-{args.population}', exist_ok=True)
 
-    if args.use_tqdm:
-        pbar = tqdm(total=len(config['nu_arr']) * config['n_ra_grid_shift'] * config['n_dec_grid_shift'])
+    pbar = tqdm(total=len(config['nu_arr']) * config['n_ra_grid_shift'] * config['n_dec_grid_shift'])
     for i_nu in range(len(config['nu_arr'])):
         for i_ra in range(config['n_ra_grid_shift']):
             for i_dec in range(config['n_dec_grid_shift']):
@@ -123,7 +121,4 @@ if __name__ == "__main__":
                     i_nu=i_nu, i_ra_grid_shift=i_ra, i_dec_grid_shift=i_dec, **config
                 )
                 
-                if args.use_tqdm:
-                    pbar.update()
-                else:
-                    print(f'i_nu={i_nu}, i_ra={i_ra}, i_dec={i_dec}')
+                pbar.update()

@@ -30,8 +30,10 @@ class Telescope:
     dec_min: float
     dec: float
     primary_beam_baseline: float
-    eta: Union[str, float]
-    T_sys: Union[str, float]
+    
+    eta_a: float # aperture efficiency
+    eta_sig: float # signal chain efficiency
+    T_sys_raw: float
     t_obs_days: float
     double_pass_dec: Optional[float] = None
     
@@ -40,14 +42,14 @@ class Telescope:
         self.extent = (
             360, 0, np.round(np.rad2deg(self.dec_min)), np.round(np.rad2deg(self.dec_max))
         )
-        
-        if isinstance(self.eta, str):
-            self.eta_data = np.loadtxt(self.eta)
-            self.eta = lambda nu: np.interp(nu, self.eta_data[0], self.eta_data[1])
+        self.T_sys = self.T_sys_raw / self.eta_sig
+#         if isinstance(self.eta, str):
+#             self.eta_data = np.loadtxt(self.eta)
+#             self.eta = lambda nu: np.interp(nu, self.eta_data[0], self.eta_data[1])
             
-        if isinstance(self.T_sys, str):
-            self.T_sys_data = np.loadtxt(self.T_sys)
-            self.T_sys = lambda nu: np.interp(nu, self.T_sys_data[0], self.T_sys_data[1])
+#         if isinstance(self.T_sys, str):
+#             self.T_sys_data = np.loadtxt(self.T_sys)
+#             self.T_sys = lambda nu: np.interp(nu, self.T_sys_data[0], self.T_sys_data[1])
             
 
 #===== telescope instances =====
@@ -60,24 +62,27 @@ CHIME = Telescope(
     dec_max = np.deg2rad(90), dec_min = np.deg2rad(-20),
     dec = np.deg2rad(49.3),
     primary_beam_baseline = 20 * 100,
-    eta = 0.87,
-    T_sys = 43,
+    eta_a = 0.5,
+    eta_sig = 1,
+    T_sys_raw = 20, # with signal chain efficiency taken into account
     t_obs_days = 5 * 365.25,
     double_pass_dec = np.deg2rad(70),
 )
 
-CHIME_at_HIRAX = Telescope(
-    name = 'CHIME_at_HIRAX',
-    nu_min = 400, nu_max = 800,
-    size_ra = 80 * 100, size_dec = 100 * 100,
-    ra_max = 2*np.pi, ra_min = 0,
-    dec_max = np.deg2rad(40), dec_min = np.deg2rad(-90),
-    dec = np.deg2rad(-30.72),
-    primary_beam_baseline = 20 * 100,
-    eta = 0.87,
-    T_sys = 43,
-    t_obs_days = 5 * 365.25,
-)
+# CHORD = Telescope(
+#     name = 'CHORD',
+#     nu_min = 300, nu_max = 1500,
+#     size_ra = 22 * 7 * 100, size_dec = 23 * 9 * 100,
+#     ra_max = 2*np.pi, ra_min = 0,
+#     dec_max = np.deg2rad(...), dec_min = np.deg2rad(...),
+#     dec = np.deg2rad(49.3),
+#     primary_beam_baseline = 6 * 100,
+#     eta_a = np.pi*3*3 / (7*9),
+#     eta_sig = ...,
+#     T_sys_raw = ..., # with signal chain efficiency taken into account
+#     t_obs_days = 5 * 365.25,
+#     double_pass_dec = np.deg2rad(70),
+# )
 
 HIRAX_256 = Telescope(
     name = 'HIRAX-256',
@@ -87,8 +92,9 @@ HIRAX_256 = Telescope(
     dec_max = np.deg2rad(0), dec_min = np.deg2rad(-60),
     dec = np.deg2rad(-30.72),
     primary_beam_baseline = 6 * 100,
-    eta = 1,
-    T_sys = 50,
+    eta_a = 0.5,
+    eta_sig = 1,
+    T_sys_raw = 50,
     t_obs_days = 2 * 365.25,
 )
 
@@ -100,8 +106,9 @@ HIRAX_1024 = Telescope(
     dec_max = np.deg2rad(0), dec_min = np.deg2rad(-60),
     dec = np.deg2rad(-30.72),
     primary_beam_baseline = 6 * 100,
-    eta = 1,
-    T_sys = 50,
+    eta_a = 0.5,
+    eta_sig = 1,
+    T_sys_raw = 50,
     t_obs_days = 2 * 365.25,
 )
 
@@ -113,7 +120,8 @@ HERA = Telescope(
     dec_max = np.deg2rad(0), dec_min = np.deg2rad(-60),
     dec = np.deg2rad(-30.72),
     primary_beam_baseline = 14 * 100,
-    eta = 1,
-    T_sys = 100,
+    eta_a = 0.5,
+    eta_sig = 1,
+    T_sys_raw = 100,
     t_obs_days = 2 * 365.25,
 )

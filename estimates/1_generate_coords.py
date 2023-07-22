@@ -26,9 +26,9 @@ def generate_coords(
     nu = nu_arr[i_nu]
     
     def ra_pixel_size(ra): # [rad]
-        return (c0 / nu) / telescope.size_ra
+        return (c0 / nu) / telescope.size_ra / np.sqrt(telescope.eta_a)
     def dec_pixel_size(dec): # [rad]
-        return (c0 / nu) / telescope.size_dec * np.cos(dec - telescope.dec)
+        return (c0 / nu) / (telescope.size_dec * np.cos(dec - telescope.dec)) / np.sqrt(telescope.eta_a)
 
     #---------- grid shift ----------
     ra_mid = np.pi
@@ -82,15 +82,13 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, required=True, help='config')
-    parser.add_argument('--use_tqdm', action='store_true', help='Use tqdm if flag is set')
     args = parser.parse_args()
     
     config = config_dict[args.config]
     
     os.makedirs(f"{intermediates_dir}/{args.config}/coords", exist_ok=True)
     
-    if args.use_tqdm:
-        pbar = tqdm(total=len(config['nu_arr']) * config['n_ra_grid_shift'] * config['n_dec_grid_shift'])
+    pbar = tqdm(total=len(config['nu_arr']) * config['n_ra_grid_shift'] * config['n_dec_grid_shift'])
     for i_nu in range(len(config['nu_arr'])):
         for i_ra in range(config['n_ra_grid_shift']):
             for i_dec in range(config['n_dec_grid_shift']):
@@ -100,7 +98,4 @@ if __name__ == "__main__":
                     save_dir=f"{intermediates_dir}/{args.config}/coords", **config
                 )
                 
-                if args.use_tqdm:
-                    pbar.update()
-                else:
-                    print(f'i_nu={i_nu}, i_ra={i_ra}, i_dec={i_dec}')
+                pbar.update()

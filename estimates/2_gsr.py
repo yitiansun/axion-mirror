@@ -99,9 +99,7 @@ def gsr(run_dir, remove_GCantiGC=True, field_model=..., telescope=..., nu_arr=..
         exposure_map *= ((dec_grid > telescope.double_pass_dec) + 1)
 
     #========== Background ==========
-    T_sys = telescope.T_sys(nu) if callable(telescope.T_sys) else telescope.T_sys
-    eta   = telescope.eta(nu)   if callable(telescope.eta)   else telescope.eta
-    bkg_temp_map = haslam_ds_map + T_sys / eta # [K/eta]
+    bkg_temp_map = haslam_ds_map + telescope.T_sys # [K/eta_sig]
 
     #========== Save ==========
     os.makedirs(f"{run_dir}/gsr_{field_model}", exist_ok=True)
@@ -116,13 +114,11 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, required=True, help='config')
-    parser.add_argument('--use_tqdm', action='store_true', help='Use tqdm if flag is set')
     args = parser.parse_args()
     
     config = config_dict[args.config]
     
-    if args.use_tqdm:
-        pbar = tqdm(total=len(config['nu_arr']) * config['n_ra_grid_shift'] * config['n_dec_grid_shift'])
+    pbar = tqdm(total=len(config['nu_arr']) * config['n_ra_grid_shift'] * config['n_dec_grid_shift'])
     for i_nu in range(len(config['nu_arr'])):
         for i_ra in range(config['n_ra_grid_shift']):
             for i_dec in range(config['n_dec_grid_shift']):
@@ -132,7 +128,4 @@ if __name__ == "__main__":
                     i_nu=i_nu, i_ra_grid_shift=i_ra, i_dec_grid_shift=i_dec, **config
                 )
                 
-                if args.use_tqdm:
-                    pbar.update()
-                else:
-                    print(f'i_nu={i_nu}, i_ra={i_ra}, i_dec={i_dec}')
+                pbar.update()

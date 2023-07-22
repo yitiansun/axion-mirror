@@ -16,12 +16,12 @@ os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 if __name__=="__main__":
     
     #===== config =====
-    include_sources = ['egrs']
-    plot_name = 'egrs'
+    include_sources = ['snr-fullinfo']
+    plot_name = 'snrf3'
     average_over_grid_shift = True
     use_tqdm = True
     
-    config_name = 'CHIME-nnu30-nra3-ndec3'
+    config_name = 'CHIME-10-4-4'
     config = config_dict[config_name]
     
     
@@ -31,7 +31,7 @@ if __name__=="__main__":
     n_nu = len(nu_arr)
     n_ra = config['n_ra_grid_shift']
     n_dec = config['n_dec_grid_shift']
-    n_sample = 100 if 'snr' in include_sources else 1
+    n_sample = 100 if np.any(['snr' in s for s in include_sources]) else 1
     
     g_arr_samples = np.zeros((n_ra, n_dec, n_sample, n_nu))
     
