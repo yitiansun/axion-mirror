@@ -189,7 +189,7 @@ def plot_lb(z, figsize=(8, 4), log_norm=True, title='', log_norm_max=None, log_n
 
 
 def plot_hv(func, smax=None, h_zval=0, zmax=None, v_tval=0, npix=None,
-            title='', symm_color=False):
+            title='', symm_color=False, **imshow_kwargs):
     
     x_s = jnp.linspace(-smax, smax, npix)
     y_s = jnp.linspace(-smax, smax, npix)
@@ -222,6 +222,7 @@ def plot_hv(func, smax=None, h_zval=0, zmax=None, v_tval=0, npix=None,
         kwargs = dict(vmin=-vabs, vmax=vabs, cmap='coolwarm')
     else:
         kwargs = dict(vmin=0, vmax=vmax, cmap='magma')
+    kwargs.update(**imshow_kwargs)
     
     im = axs[0].imshow(jnp.flipud(hslice), extent=(-smax, smax, -smax, smax), **kwargs)
     axs[1].imshow(jnp.flipud(jnp.array(vslice)), extent=(0, smax, -zmax, zmax), **kwargs)
