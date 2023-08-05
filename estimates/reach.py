@@ -7,8 +7,8 @@ import numpy as np
 from config import config_dict, intermediates_dir
 
 sys.path.append("..")
-from aatw.units_constants import *
-from aatw.spectral import dnu
+from axionmirror.units_constants import *
+from axionmirror.spectral import dnu
 
 os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 

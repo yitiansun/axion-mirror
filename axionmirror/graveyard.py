@@ -10,11 +10,11 @@ from scipy import stats
 import jax.numpy as jnp
 from jax import vmap
 
-from aatw.units_constants import *
-from aatw.geometry import Glbd, GCstz
-from aatw.stats import sample_from_pdf, poisson_process
-from aatw.nfw import rho_NFW
-from aatw.snr import SNR
+from axionmirror.units_constants import *
+from axionmirror.geometry import Glbd, GCstz
+from axionmirror.stats import sample_from_pdf, poisson_process
+from axionmirror.nfw import rho_NFW
+from axionmirror.snr import SNR
 
 
 #===== rate =====

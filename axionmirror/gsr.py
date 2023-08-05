@@ -12,7 +12,7 @@ import jax.numpy as jnp
 from jax import vmap
 from functools import partial
 
-from aatw.units_constants import *
+from axionmirror.units_constants import *
 
 
 #===== spectral indices =====

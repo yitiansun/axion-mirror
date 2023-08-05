@@ -12,11 +12,11 @@ from astropy.io import fits
 from config import config_dict, intermediates_dir
 
 sys.path.append("..")
-import aatw.units_constants as uc
-from aatw.nfw import rho_integral
-from aatw.spectral import prefac
-from aatw.map_utils import antipodal_map
-from aatw.egrs import egrs_list_keuhr
+import axionmirror.units_constants as uc
+from axionmirror.nfw import rho_integral
+from axionmirror.spectral import prefac
+from axionmirror.map_utils import antipodal_map
+from axionmirror.egrs import egrs_list_keuhr
 
 os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 

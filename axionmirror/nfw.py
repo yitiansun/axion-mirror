@@ -6,8 +6,8 @@ sys.path.append('..')
 import jax.numpy as jnp
 from jax import jit, vmap
 
-from aatw.units_constants import *
-from aatw.geometry import Gr
+from axionmirror.units_constants import *
+from axionmirror.geometry import Gr
 
 
 #===== constants =====

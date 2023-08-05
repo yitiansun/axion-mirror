@@ -3,7 +3,7 @@
 import sys
 sys.path.append("..")
 
-from aatw.units_constants import hbar, c0, sigmad_over_c, gagg_CAST
+from axionmirror.units_constants import hbar, c0, sigmad_over_c, gagg_CAST
 
 
 fDelta = 0.721 # frequency domain cut associated with the above bandwidth (2.17)

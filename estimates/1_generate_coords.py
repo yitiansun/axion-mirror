@@ -12,8 +12,8 @@ from astropy.coordinates import SkyCoord
 from config import config_dict, intermediates_dir
 
 sys.path.append("..")
-from aatw.map_utils import grid_edges
-from aatw.units_constants import *
+from axionmirror.map_utils import grid_edges
+from axionmirror.units_constants import *
 
 os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 

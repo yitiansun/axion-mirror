@@ -10,8 +10,8 @@ import jax.numpy as jnp
 from config import config_dict, intermediates_dir
 
 sys.path.append("..")
-from aatw.units_constants import *
-from aatw.snr import load_snr_list, add_image_to_map
+from axionmirror.units_constants import *
+from axionmirror.snr import load_snr_list, add_image_to_map
 
 os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 

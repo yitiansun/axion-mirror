@@ -3,7 +3,7 @@ import sys
 import numpy as np
 
 sys.path.append("..")
-from aatw.telescopes import CHIME, HIRAX_1024, HERA
+from axionmirror.telescopes import CHIME, HIRAX_1024, HERA
 
 
 intermediates_dir = '/n/holyscratch01/iaifi_lab/yitians/all_sky_gegenschein/axions-against-the-world/outputs/intermediates'

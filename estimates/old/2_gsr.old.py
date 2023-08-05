@@ -12,10 +12,10 @@ import jax.numpy as jnp
 from config import config_dict, intermediates_dir
 
 sys.path.append("..")
-from aatw.units_constants import *
-from aatw.nfw import rho_integral, rho_integral_ref
-from aatw.spectral import dnu, prefac
-from aatw.map_utils import interpolate_padded
+from axionmirror.units_constants import *
+from axionmirror.nfw import rho_integral, rho_integral_ref
+from axionmirror.spectral import dnu, prefac
+from axionmirror.map_utils import interpolate_padded
 
 os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 

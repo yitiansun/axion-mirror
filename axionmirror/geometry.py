@@ -9,7 +9,7 @@ from astropy import units as u
 import jax.numpy as jnp
 from jax import jit, vmap
 
-from aatw.units_constants import *
+from axionmirror.units_constants import *
 
 
 #===== constants =====
