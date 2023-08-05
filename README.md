@@ -1,4 +1,4 @@
-# Axions against the world
+# Axion mirror
 
 ![](outputs/graveyard_samples.gif)
 
