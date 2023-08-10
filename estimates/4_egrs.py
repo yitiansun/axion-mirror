@@ -27,6 +27,7 @@ def egrs(run_dir, telescope=..., nu_arr=..., smooth=False,
     
     nu = nu_arr[i_nu]
     subrun_postfix = f'inu{i_nu}-ira{i_ra_grid_shift}-idec{i_dec_grid_shift}'
+    include_forwardschein = False
     
     #===== Coords =====
     coords_dict = pickle.load(open(f'{run_dir}/coords/coords-{subrun_postfix}.p', 'rb'))
@@ -66,8 +67,10 @@ def egrs(run_dir, telescope=..., nu_arr=..., smooth=False,
     #===== rho_DM =====
     rho_integral_map = rho_integral(lb_flat).reshape(radec_shape)
     gegen_map = prefac(nu) * antipodal_map(egrs_map) * rho_integral_map
-    forward_map = prefac(nu) * egrs_map * rho_integral_map
-    total_map = gegen_map + forward_map
+    total_map = gegen_map
+    if include_forwardschein:
+        forward_map = prefac(nu) * egrs_map * rho_integral_map
+        total_map += forward_map
     
     #===== smooth for numerical stability =====
     sigma = 1 # [pixel]

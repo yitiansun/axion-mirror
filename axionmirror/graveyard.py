@@ -120,6 +120,14 @@ def snr_stz_pdf_G_softz(stz):
     beta = 3.87 # [1]
     return (s/R_sun)**alpha * jnp.exp(-beta*(s-R_sun)/R_sun) * jnp.exp(-jnp.abs(z)/0.1)
 
+def snr_fi_pdf(stz):
+    """Pdf from kde of observed fullinfo SNR. Vectorized in first dimension."""
+    kde, z_scale = pickle.load(open("../outputs/snr/snr_fi_kde_zscale.p", 'rb'))
+    
+    xyz = np.array(GCxyz_stz(stz))
+    xyz[:,2] *= z_scale
+    return np.exp(kde.score_samples(xyz))
+
 def sample_snr_stz_G(num_samples=1):
     """SNR location sampler.
     Following 1508.02931 Green.
