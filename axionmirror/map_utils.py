@@ -10,28 +10,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
-#===== map pixels =====
-
-def grid_edges(pixel_size_func, a_min, a_max, a_mid=0.):
-    
-    grid_edges = [a_mid]
-    a = a_mid
-    a += pixel_size_func(a)
-    while a < a_max:
-        grid_edges.append(a)
-        a += pixel_size_func(a)
-    grid_edges.append(a_max)
-    
-    a = a_mid
-    a -= pixel_size_func(a)
-    while a > a_min:
-        grid_edges.insert(0, a)
-        a -= pixel_size_func(a)
-    grid_edges.insert(0, a_min)
-    
-    return grid_edges
-
-
 #===== map functions =====
 
 def antipodal_map(m):
