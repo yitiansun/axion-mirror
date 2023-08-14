@@ -1,17 +1,18 @@
-"""Functions or graveyard SNRs"""
+"""Functions for graveyard SNRs"""
 
 import sys
-sys.path.append("..")
-
+import pickle
 from tqdm import tqdm
 
 import numpy as np
 from scipy import stats
 import jax.numpy as jnp
-from jax import vmap
+from jax import jit, vmap
+from functools import partial
 
+sys.path.append("..")
 from axionmirror.units_constants import *
-from axionmirror.geometry import Glbd, GCstz
+from axionmirror.geometry import Glbd, GCstz, GCxyz_stz
 from axionmirror.stats import sample_from_pdf, poisson_process
 from axionmirror.nfw import rho_NFW
 from axionmirror.snr import SNR
@@ -116,17 +117,16 @@ def snr_stz_pdf_G_softz(stz):
     s, t, z = stz[:,0], stz[:,1], stz[:,2]
     
     R_sun = 8.5 # [kpc]
+    z_scale = 0.1 # [kpc]
     alpha = 1.09 # [1]
     beta = 3.87 # [1]
-    return (s/R_sun)**alpha * jnp.exp(-beta*(s-R_sun)/R_sun) * jnp.exp(-jnp.abs(z)/0.1)
+    return (s/R_sun)**alpha * jnp.exp(-beta*(s-R_sun)/R_sun) * jnp.exp(-jnp.abs(z)/z_scale)
 
-def snr_fi_pdf(stz):
+def snr_fi_pdf(stz, kernel, z_scale):
     """Pdf from kde of observed fullinfo SNR. Vectorized in first dimension."""
-    kde, z_scale = pickle.load(open("../outputs/snr/snr_fi_kde_zscale.p", 'rb'))
-    
-    xyz = np.array(GCxyz_stz(stz))
-    xyz[:,2] *= z_scale
-    return np.exp(kde.score_samples(xyz))
+    xyz = GCxyz_stz(stz)
+    xyz_in = jnp.stack([xyz[:,0], xyz[:,1], xyz[:,2]*z_scale], axis=0)
+    return kernel.pdf(xyz_in)
 
 def sample_snr_stz_G(num_samples=1):
     """SNR location sampler.
@@ -147,6 +147,7 @@ def sample_snr_stz_G(num_samples=1):
                      t_samples,
                      z_samples], axis=-1)
 
+@partial(jit, static_argnames=['stz_pdf_func', 'lowerbound', 'upperbound', 'num_samples'])
 def sample_snr_d(stz_pdf_func, l, b, lowerbound, upperbound, num_samples=1):
     """SNR distance sampler.
     Given stz_pdf_func(callable), l [rad], b [rad], lowerbound [kpc], upperbound [kpc],
@@ -154,7 +155,7 @@ def sample_snr_d(stz_pdf_func, l, b, lowerbound, upperbound, num_samples=1):
     """
     def d_pdf(d):
         stz = GCstz(jnp.array([[l, b, d]]))
-        return stz_pdf_func(stz)[0]
+        return stz_pdf_func(stz)[0] * d**2
     
     return sample_from_pdf(vmap(d_pdf), lowerbound, upperbound, num_samples)
 
@@ -228,7 +229,7 @@ def fixed_t_free(value='est'):
 
 #===== full graveyard sample =====
     
-def sample_graveyard_snrs(t_cutoff=100000, verbose=1):
+def sample_graveyard_snrs(t_cutoff=100000, verbose=1, build=False):
     """t_cutoff in [yr], set at end of adiabatic phase typically."""
 
     t_now_arr = np.array(poisson_process(snr_forming_rate_tot(), t_cutoff))
@@ -243,7 +244,7 @@ def sample_graveyard_snrs(t_cutoff=100000, verbose=1):
     t_pk_arr = sample_t_pk(n_snr)
     #t_free_arr = sample_t_free(n_snr)
     t_free_arr = np.full((n_snr,), fixed_t_free())
-    Snu1GHz_pk_arr = sample_Snu1GHz_pk(n_snr, si=si_arr, d=lbd_arr[:, 2]),
+    Snu1GHz_pk_arr = sample_Snu1GHz_pk(n_snr, si=si_arr, d=lbd_arr[:, 2])
     
     snr_list = []
     for i in (tqdm(range(n_snr)) if verbose >= 1 else range(n_snr)):
@@ -260,6 +261,7 @@ def sample_graveyard_snrs(t_cutoff=100000, verbose=1):
             Snu1GHz_pk = Snu1GHz_pk_arr[i],
             si = si_arr[i],
         )
-        snr.build(rho_DM=rho_NFW, use_lightcurve=True, integrate_method='trapz')
+        if build:
+            snr.build(rho_DM=rho_NFW, use_lightcurve=True, integrate_method='trapz')
         snr_list.append(snr)
     return snr_list

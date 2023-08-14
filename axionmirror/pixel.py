@@ -56,7 +56,7 @@ class PixelConfig:
         self.postfix = f'inu{i_nu}-ira{i_ra_shift}-idec{i_dec_shift}'
         self.nu = self.nu_s[i_nu]
         self.ra_mid = self.ra_mids[i_ra_shift]
-        self.dec_mid = self.dec_mids[i_dec_shiftift]
+        self.dec_mid = self.dec_mids[i_dec_shift]
         self.ra_edges = grid_edges(
             partial(self.telescope.ra_pixel_size, nu=self.nu),
             self.telescope.survey_ra_min,
