@@ -122,11 +122,14 @@ class Telescope:
         return self.T_rec_raw / self.eta_sig
     
     def t_obs(self, nu, dec):
-        """Total observation time [s]."""
-        s_per_day = 86400
-        t_obs_per_day = s_per_day * self.primary_beam_size_ra(nu) / (2*np.pi * np.cos(dec))
+        """Total observation time [s]. dec can take any shape."""
+        t_per_day = 86400 # [s]
         if self.pointing:
-            t_obs_per_day *= self.primary_beam_baseline_dec(nu) / (self.survey_dec_max(nu) - self.survey_dec_min(nu))
+            t_per_day *= self.primary_beam_baseline_dec(nu) / (self.survey_dec_max(nu) - self.survey_dec_min(nu))
+        t_obs_per_day = t_per_day * self.primary_beam_size_ra(nu) / (2*np.pi * np.cos(dec))
+        if self.double_pass_dec is not None:
+            t_obs_per_day *= ((dec > self.double_pass_dec(nu)) + 1)
+        
         return self.t_obs_days * t_obs_per_day
             
 
@@ -180,8 +183,8 @@ CHORD = Telescope(
     t_obs_days = 5 * 365.25,
 )
 
-HIRAX_256 = Telescope(
-    name = 'HIRAX-256',
+HIRAX256 = Telescope(
+    name = 'HIRAX256',
     nu_min = 400, nu_max = 800,
     dec = np.deg2rad(-30.7),
     pointing = True,
@@ -196,8 +199,8 @@ HIRAX_256 = Telescope(
     t_obs_days = 5 * 365.25,
 )
 
-HIRAX_1024 = Telescope(
-    name = 'HIRAX-1024',
+HIRAX1024 = Telescope(
+    name = 'HIRAX1024',
     nu_min = 400, nu_max = 800,
     dec = np.deg2rad(-30.7),
     pointing = True,

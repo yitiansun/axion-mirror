@@ -1,61 +1,42 @@
 import os
 import sys
-from tqdm import tqdm
-import pickle
 import h5py
 import argparse
 
 import numpy as np
 import healpy as hp
-from astropy.io import fits
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 import jax.numpy as jnp
 
-from config import config_dict, intermediates_dir
+from config import pc_dict
 
 sys.path.append("..")
-from axionmirror.units_constants import *
-from axionmirror.nfw import rho_integral, rho_integral_ref
-from axionmirror.spectral import dnu, prefac
+from axionmirror.spectral import prefac
 from axionmirror.map_utils import pad_mbl, interp2d_vmap
 
 os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 
 
-def gsr(run_dir, remove_GCantiGC=True, field_model=..., telescope=..., nu_arr=...,
-        i_nu=..., i_ra_grid_shift=..., i_dec_grid_shift=..., **kwargs):
-    """Make signal and background maps for Galactic Synchrotron Radiation (GSR)"""
+def gsr(pc, field_model=...):
+    """Make signal and background maps from galactic synchrotron radiation (GSR)."""
+
+    #===== settings =====
+    remove_GCantiGC = True
     
-    nu = nu_arr[i_nu]
-    
-    subrun_postfix = f'inu{i_nu}-ira{i_ra_grid_shift}-idec{i_dec_grid_shift}'
-    
-    coords_dict = pickle.load(open(f'{run_dir}/coords/coords-{subrun_postfix}.p', 'rb'))
-    ra_s = coords_dict['ra_s']
-    dec_s = coords_dict['dec_s']
-    ra_edges = coords_dict['ra_edges']
-    dec_edges = coords_dict['dec_edges']
-    ra_grid = coords_dict['ra_grid']
-    dec_grid = coords_dict['dec_grid']
-    radec_flat = coords_dict['radec_flat']
-    radec_shape = coords_dict['radec_shape']
-    l_grid = coords_dict['l_grid']
-    b_grid = coords_dict['b_grid']
-    
-    #========== Source (Haslam) map ==========
+    #===== source (Haslam) map =====
     nu_haslam = 408 # [MHz]
     beta = -2.5
     # destriped (not desourced) map for background
     haslam_ds_map_hp = hp.read_map('../data/gsr/haslam408_ds_Remazeilles2014.fits')
-    haslam_ds_map_hp *= (nu/nu_haslam) ** beta
+    haslam_ds_map_hp *= (pc.nu/nu_haslam) ** beta
     haslam_ds_map = hp.pixelfunc.get_interp_val(
-        haslam_ds_map_hp, np.rad2deg(l_grid), np.rad2deg(b_grid), lonlat=True
+        haslam_ds_map_hp, np.rad2deg(pc.l_grid), np.rad2deg(pc.b_grid), lonlat=True
     )
     
-    #========== Signal ==========
-    l_grid = jnp.where(l_grid > np.pi, l_grid - 2*np.pi, l_grid)
-    bl_flat = jnp.stack([b_grid.ravel(), l_grid.ravel()], axis=-1)
+    #===== signal =====
+    l_grid_zc = jnp.where(pc.l_grid > np.pi, pc.l_grid - 2*np.pi, pc.l_grid) # zero centered
+    bl_flat = jnp.stack([pc.b_grid.ravel(), l_grid_zc.ravel()], axis=-1)
     
     if field_model != 'JF':
         raise NotImplementedError(field_model)
@@ -68,9 +49,9 @@ def gsr(run_dir, remove_GCantiGC=True, field_model=..., telescope=..., nu_arr=..
         jnp.asarray(padded_b),
         jnp.asarray(padded_l),
         bl_flat
-    ).reshape(radec_shape)
+    ).reshape(pc.radec_shape)
     
-    sig_temp_map = np.array(sig_temp_map) * (nu/nu_haslam)**beta * (prefac(nu)/prefac(nu_haslam))
+    sig_temp_map = np.array(sig_temp_map) * (pc.nu/nu_haslam)**beta * (prefac(pc.nu)/prefac(nu_haslam))
     
     #----- remove GC pixel and anti-GC pixel -----
     if remove_GCantiGC:
@@ -78,36 +59,26 @@ def gsr(run_dir, remove_GCantiGC=True, field_model=..., telescope=..., nu_arr=..
         ra_GC = coord_GC.icrs.ra.rad
         dec_GC = coord_GC.icrs.dec.rad
 
-        i_ra_GC = np.searchsorted(ra_edges, ra_GC) - 1 # v_edges[i-1] < v < v_edges[i]
-        i_dec_GC = np.searchsorted(dec_edges, dec_GC) - 1
-        if 0 < i_dec_GC and i_dec_GC < len(dec_s): # checking only DEC because RA must be in range
+        i_ra_GC = np.searchsorted(pc.ra_edges, ra_GC) - 1 # v_edges[i-1] < v < v_edges[i]
+        i_dec_GC = np.searchsorted(pc.dec_edges, dec_GC) - 1
+        if 0 < i_dec_GC and i_dec_GC < pc.n_dec and 0 < i_ra_GC and i_ra_GC < pc.n_ra:
             sig_temp_map[i_dec_GC, i_ra_GC] = 0
 
         ra_antiGC = ra_GC+np.pi if ra_GC < np.pi else ra_GC-np.pi
         dec_antiGC = - dec_GC
 
-        i_ra_antiGC = np.searchsorted(ra_edges, ra_antiGC) - 1 # v_edges[i-1] < v < v_edges[i]
-        i_dec_antiGC = np.searchsorted(dec_edges, dec_antiGC) - 1
-        if 0 < i_dec_antiGC and i_dec_antiGC < len(dec_s): # checking only DEC because RA must be in range
+        i_ra_antiGC = np.searchsorted(pc.ra_edges, ra_antiGC) - 1 # v_edges[i-1] < v < v_edges[i]
+        i_dec_antiGC = np.searchsorted(pc.dec_edges, dec_antiGC) - 1
+        if 0 < i_dec_GC and i_dec_GC < pc.n_dec and 0 < i_ra_GC and i_ra_GC < pc.n_ra:
             sig_temp_map[i_dec_antiGC, i_ra_antiGC] = 0
 
-    #========== Exposure ==========
-    ra_beam_size = (c0 / nu) / telescope.primary_beam_baseline
-    sec_in_day = 86400 # [s]
-    exposure_map = sec_in_day / (2*np.pi / ra_beam_size)
-    if telescope.double_pass_dec is not None:
-        exposure_map *= ((dec_grid > telescope.double_pass_dec) + 1)
+    #===== background =====
+    bkg_temp_map = haslam_ds_map + pc.telescope.T_rec # [K/eta_sig]
 
-    #========== Background ==========
-    bkg_temp_map = haslam_ds_map + telescope.T_sys # [K/eta_sig]
-
-    #========== Save ==========
-    os.makedirs(f"{run_dir}/gsr_{field_model}", exist_ok=True)
-    os.makedirs(f"{run_dir}/bkg", exist_ok=True)
-    os.makedirs(f"{run_dir}/exposure", exist_ok=True)
-    np.save(f'{run_dir}/gsr_{field_model}/gsr-{subrun_postfix}.npy', sig_temp_map)
-    np.save(f'{run_dir}/bkg/bkg-{subrun_postfix}.npy', bkg_temp_map)
-    np.save(f'{run_dir}/exposure/exposure-{subrun_postfix}.npy', exposure_map)
+    #===== save =====
+    for temp_name, temp_map in zip([f'gsr{field_model}', 'bkg'], [sig_temp_map, bkg_temp_map]):
+        os.makedirs(f"{pc.save_dir}/{temp_name}", exist_ok=True)
+        np.save(f'{pc.save_dir}/{temp_name}/{temp_name}-{pc.postfix}.npy', temp_map)
     
 
 if __name__ == "__main__":
@@ -116,16 +87,5 @@ if __name__ == "__main__":
     parser.add_argument('--config', type=str, required=True, help='config')
     args = parser.parse_args()
     
-    config = config_dict[args.config]
-    
-    pbar = tqdm(total=len(config['nu_arr']) * config['n_ra_grid_shift'] * config['n_dec_grid_shift'])
-    for i_nu in range(len(config['nu_arr'])):
-        for i_ra in range(config['n_ra_grid_shift']):
-            for i_dec in range(config['n_dec_grid_shift']):
-                
-                gsr(
-                    run_dir=f'{intermediates_dir}/{args.config}', field_model='JF', remove_GCantiGC=True,
-                    i_nu=i_nu, i_ra_grid_shift=i_ra, i_dec_grid_shift=i_dec, **config
-                )
-                
-                pbar.update()
+    pc = pc_dict[args.config]
+    pc.iter_over_func(gsr, field_model='JF')
