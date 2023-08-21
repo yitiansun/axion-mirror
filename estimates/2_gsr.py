@@ -69,7 +69,7 @@ def gsr(pc, field_model=...):
 
         i_ra_antiGC = np.searchsorted(pc.ra_edges, ra_antiGC) - 1 # v_edges[i-1] < v < v_edges[i]
         i_dec_antiGC = np.searchsorted(pc.dec_edges, dec_antiGC) - 1
-        if 0 < i_dec_GC and i_dec_GC < pc.n_dec and 0 < i_ra_GC and i_ra_GC < pc.n_ra:
+        if 0 < i_dec_antiGC and i_dec_antiGC < pc.n_dec and 0 < i_ra_antiGC and i_ra_antiGC < pc.n_ra:
             sig_temp_map[i_dec_antiGC, i_ra_antiGC] = 0
 
     #===== background =====

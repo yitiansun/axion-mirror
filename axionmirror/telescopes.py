@@ -89,7 +89,7 @@ class Telescope:
         else:
             if self.pointing:
                 raise NotImplementedError
-            return self.primary_beam_size_dec(nu, self.dec) / 2
+            return self.primary_beam_size_dec(nu) / 2
         
     def survey_dec_max(self, nu):
         """Maximum survey declination [rad]."""
@@ -125,9 +125,9 @@ class Telescope:
         """Total observation time [s]. dec can take any shape."""
         t_per_day = 86400 # [s]
         if self.pointing:
-            t_per_day *= self.primary_beam_baseline_dec(nu) / (self.survey_dec_max(nu) - self.survey_dec_min(nu))
+            t_per_day *= self.primary_beam_size_dec(nu) / (self.survey_dec_max(nu) - self.survey_dec_min(nu))
         t_obs_per_day = t_per_day * self.primary_beam_size_ra(nu) / (2*np.pi * np.cos(dec))
-        if self.double_pass_dec is not None:
+        if self.double_pass_dec(nu) is not None:
             t_obs_per_day *= ((dec > self.double_pass_dec(nu)) + 1)
         
         return self.t_obs_days * t_obs_per_day

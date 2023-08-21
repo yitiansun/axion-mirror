@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 from tqdm import tqdm
 import h5py
 import numpy as np
@@ -14,13 +15,17 @@ os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 
 
 if __name__=="__main__":
-    
-    #===== settings =====
-    pc = pc_dict['CHIME']
-    # ['egrs', 'gsr', 'snr-fullinfo', 'snr-partialinfo', 'snr-graveyard']
-    include_sources = ['snr-graveyard']
-    save_name = 'snrg'
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, required=True, help='config')
+    parser.add_argument('--src', nargs='+', required=True, help='subset of [egrs, gsr, snr-fullinfo, snr-partialinfo, snr-graveyard]')
+    parser.add_argument('--save', type=str, required=True, help='save name')
+    args = parser.parse_args()
+
+    pc = pc_dict[args.config]
+    include_sources = args.src
+    save_name = args.save
+    
     average_over_grid_shift = True
     n_sample = 100 if np.any(['snr' in s for s in include_sources]) else 1
 
