@@ -2,12 +2,12 @@
 
 import sys
 from dataclasses import dataclass
-from typing import Union, Optional
 
 import numpy as np
 
 sys.path.append("..")
 import axionmirror.units_constants as uc
+from axionmirror.spectral import dnu
 
 data_dir = "../data"
 
@@ -131,7 +131,40 @@ class Telescope:
             t_obs_per_day *= ((dec > self.double_pass_dec(nu)) + 1)
         
         return self.t_obs_days * t_obs_per_day
-            
+    
+    @property
+    def Aeff_zenith(self):
+        """Effective area at zenith [cm^2]."""
+        return self.eta_a_ra * self.eta_a_dec * self.eta_f_ra * self.eta_f_dec * self.size_ra * self.size_dec
+    
+    def Aeff(self, dec):
+        """Effective area [cm^2]."""
+        return self.Aeff_zenith * np.cos(dec - self.dec)
+    
+    def survey_area(self, nu):
+        """Survey area [sr]."""
+        return (self.survey_ra_max - self.survey_ra_min) * (np.sin(self.survey_dec_max(nu)) - np.sin(self.survey_dec_min(nu)))
+    
+    def crude_estimate(self, nu_s):
+        """Crude estimate of gagg sensitivity [GeV^-1] at given frequencies [MHz]."""
+        T_sig = 1.5e-5 # [K] at 408 MHz
+        si_sig = -2.5 # S ~ nu^2 T Omega ~ nu^2 T lambda^2 ~ T. ??
+        T_bkg = 35 # [K] at 408 MHz, mean of Haslam map
+        si_bkg = -2.5
+        nu_haslam = 408 # [MHz]
+
+        gagg_s = np.zeros_like(nu_s)
+
+        for i_nu, nu in enumerate(nu_s):
+            pixel_size = (uc.c0 / nu) ** 2 / self.Aeff_zenith # [rad^2]
+            n_pixel = self.survey_area(nu) / pixel_size
+            t_obs = self.t_obs(nu, self.dec)
+            snratio_per_pixel = T_sig * (nu/nu_haslam)**si_sig / (T_bkg * (nu/nu_haslam)**si_bkg + self.T_rec) * np.sqrt(2 * dnu(nu) * 1e6 * t_obs)
+            snratio = np.sqrt(n_pixel) * snratio_per_pixel
+            gagg_s[i_nu] = (uc.gagg_CAST/uc.invGeV) / np.sqrt(snratio)
+
+        return gagg_s
+    
 
 #===== telescope instances =====
 
@@ -212,5 +245,37 @@ HIRAX1024 = Telescope(
     primary_beam_baseline_ra = 6 * 100, primary_beam_baseline_dec = 6 * 100,
     eta_sig = 1.,
     T_rec_raw = 50.,
+    t_obs_days = 5 * 365.25,
+)
+
+BURSTT256 = Telescope(
+    name = 'BURSTT256',
+    nu_min = 300, nu_max = 800,
+    dec = np.deg2rad(23.7),
+    pointing = False,
+    survey_ra_max = 2*np.pi, survey_ra_min = 0.,
+    fixed_survey_za_max = np.deg2rad(50),
+    size_ra = 16 * 2 * 100, size_dec = 16 * 2 * 100,
+    eta_f_ra = np.sqrt(1), eta_f_dec = np.sqrt(1),
+    eta_a_ra = np.sqrt(0.134), eta_a_dec = np.sqrt(0.134),
+    primary_beam_baseline_ra = 2 * 100, primary_beam_baseline_dec = 2 * 100,
+    eta_sig = 1.,
+    T_rec_raw = 30.,
+    t_obs_days = 5 * 365.25,
+)
+
+BURSTT2048 = Telescope(
+    name = 'BURSTT2048',
+    nu_min = 300, nu_max = 800,
+    dec = np.deg2rad(23.7),
+    pointing = False,
+    survey_ra_max = 2*np.pi, survey_ra_min = 0.,
+    fixed_survey_za_max = np.deg2rad(50),
+    size_ra = 45 * 2 * 100, size_dec = 45 * 2 * 100,
+    eta_f_ra = np.sqrt(1), eta_f_dec = np.sqrt(1),
+    eta_a_ra = np.sqrt(0.134), eta_a_dec = np.sqrt(0.134),
+    primary_beam_baseline_ra = 2 * 100, primary_beam_baseline_dec = 2 * 100,
+    eta_sig = 1.,
+    T_rec_raw = 30.,
     t_obs_days = 5 * 365.25,
 )
