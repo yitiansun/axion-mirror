@@ -1,4 +1,4 @@
-TELESCOPE='HIRAX1024'
+TELESCOPE='HERA'
 
 echo '1_egrs:'
 python 1_egrs.py --config $TELESCOPE
