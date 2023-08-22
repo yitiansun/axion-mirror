@@ -145,8 +145,19 @@ class Telescope:
         """Survey area [sr]."""
         return (self.survey_ra_max - self.survey_ra_min) * (np.sin(self.survey_dec_max(nu)) - np.sin(self.survey_dec_min(nu)))
     
-    def crude_estimate(self, nu_s):
-        """Crude estimate of gagg sensitivity [GeV^-1] at given frequencies [MHz]."""
+    def instantaneous_fov(self, nu):
+        """Instantaneous field of view [sr]."""
+        if self.pointing:
+            return self.primary_beam_size_ra(nu) * self.primary_beam_size_dec(nu)
+        else:
+            return self.primary_beam_size_ra(nu) * 2 * self.survey_za_max(nu)
+        
+    def figure_of_merit(self, nu):
+        """Figure of merit sqrt(Aeff * FOV)."""
+        return np.sqrt(self.Aeff_zenith * self.instantaneous_fov(nu))
+    
+    def sens_estimate(self, nu_s):
+        """Crude estimate of g_agg sensitivity [GeV^-1] at given frequencies [MHz]."""
         T_sig = 1.5e-5 # [K] at 408 MHz
         si_sig = -2.5 # S ~ nu^2 T Omega ~ nu^2 T lambda^2 ~ T. ??
         T_bkg = 35 # [K] at 408 MHz, mean of Haslam map
