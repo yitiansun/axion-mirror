@@ -38,7 +38,7 @@ def egrs(pc):
         delta_ra  = np.diff(pc.ra_edges)[i_ra]
         
         pixel_area = delta_dec * delta_ra * np.cos(egrs.dec) # [rad^2]
-        I = egrs.Snu(pc.nu)/pixel_area # [Jy sr^-1]
+        I = egrs.Snu_no_extrap(pc.nu)/pixel_area # [Jy sr^-1]
         # I = 2 * nu^2 kb T / c0^2
         # [MHz^2 g sr^-1] = [MHz^2] [cm^2 MHz^2 g] [cm^-2 MHz^-2]
         T = I * uc.Jy / (2 * pc.nu**2 * uc.kb / uc.c0**2)
