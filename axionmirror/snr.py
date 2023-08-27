@@ -53,6 +53,7 @@ def gaussian(sigma, x0=0, y0=0):
 def add_image_to_map(fullmap, ra_s, dec_s, ra_edges, dec_edges, pixel_area_map,
                      source_ra, source_dec, image_sigma, n_sigma, T_submap_prefactor,
                      use_gaussian_intg=False, modify_mode='add', debug=False):
+    """Add a gaussian image to a map."""
     
     if source_dec < dec_edges[0] or source_dec > dec_edges[-1]: # can't see source
         return
@@ -147,8 +148,8 @@ class SNR:
     t_pk: float = None # [yr] | Time at peak luminosity
     
     #===== options =====
-    tiop: str = None
-    integrate_method: str = None
+    tiop: str = None # '1' or '2' | option for t index of powerlaw for adiabatic expansion, depending on electron model
+    integrate_method: str = None # 'quad' or 'trapz' | integration method for gegenschein
     use_lightcurve: bool = None # Whether to use lightcurve for free expansion
     infer_lightcurve_from_now: bool = None # Whether lightcurve inferred from information at present day
     
@@ -354,6 +355,7 @@ class SNR:
 #===== SNR utilities =====
 
 def GID(l, b):
+    """Standard ID for a SNR with l [deg], b [deg]."""
     if isinstance(l, str):
         l = float(l)
     if isinstance(b, str):
@@ -364,6 +366,7 @@ def GID(l, b):
     return 'G' + ('%05.1f'%l) + sign + ('%04.1f'%np.abs(b))
 
 def get_snr(name, snr_list):
+    """Get a SNR object from a list of SNR objects by name or alternative name."""
     for snr in snr_list:
         if snr.ID==name or snr.name_alt==name:
             return snr
@@ -371,9 +374,16 @@ def get_snr(name, snr_list):
 
 
 def dump_snr_list(snr_list, fn):
+    """Save a list of SNR objects to a json file."""
     config_list = [asdict(snr) for snr in snr_list]
     json.dump(config_list, open(fn, 'w'))
     
 def load_snr_list(fn):
+    """Load a list of SNR objects from a json file."""
     config_list = json.load(open(fn, 'r'))
     return [SNR(**config) for config in config_list]
+
+def best_snrs(snr_list, top_n, nu_ref=1000, t_ref=50/365.25):
+    """Return the top_n SNRs with the highest Snu_t(nu_ref [MHz], t_ref [yr])."""
+    inds = np.argsort([snr.Snu_t(nu_ref, t_ref) for snr in snr_list])[::-1]
+    return [snr_list[i] for i in inds[:top_n]]

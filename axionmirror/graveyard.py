@@ -13,7 +13,7 @@ from functools import partial
 sys.path.append("..")
 from axionmirror.units_constants import *
 from axionmirror.geometry import Glbd, GCstz, GCxyz_stz
-from axionmirror.stats import sample_from_pdf, poisson_process
+from axionmirror.stats import sample_from_pdf, sample_from_pdf_jax, poisson_process
 from axionmirror.nfw import rho_NFW
 from axionmirror.snr import SNR
 
@@ -148,7 +148,7 @@ def sample_snr_stz_G(num_samples=1):
                      z_samples], axis=-1)
 
 @partial(jit, static_argnames=['stz_pdf_func', 'lowerbound', 'upperbound', 'num_samples'])
-def sample_snr_d(stz_pdf_func, l, b, lowerbound, upperbound, num_samples=1):
+def sample_snr_d(rng_key, stz_pdf_func, l, b, lowerbound, upperbound, num_samples=1):
     """SNR distance sampler.
     Given stz_pdf_func(callable), l [rad], b [rad], lowerbound [kpc], upperbound [kpc],
     sample 1 instance of d [kpc].
@@ -157,7 +157,7 @@ def sample_snr_d(stz_pdf_func, l, b, lowerbound, upperbound, num_samples=1):
         stz = GCstz(jnp.array([[l, b, d]]))
         return stz_pdf_func(stz)[0] * d**2
     
-    return sample_from_pdf(vmap(d_pdf), lowerbound, upperbound, num_samples)
+    return sample_from_pdf_jax(rng_key, vmap(d_pdf), lowerbound, upperbound, num_samples)
 
 
 #===== spectral index =====
