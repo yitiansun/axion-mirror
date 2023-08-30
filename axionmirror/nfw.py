@@ -12,7 +12,7 @@ from axionmirror.geometry import Gr
 
 #===== constants =====
 
-rho_r_Sun = 0.46*GeV / c0**2 # [g/cm^3]
+rho_r_Sun = 0.44*GeV / c0**2 # [g/cm^3]
 intg_d_s = jnp.concatenate((jnp.linspace(0, 20, 200, endpoint=False), # [kpc]
                             jnp.linspace(20, 200, 200, endpoint=False),
                             jnp.linspace(200, 1000, 100, endpoint=True)))

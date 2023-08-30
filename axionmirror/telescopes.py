@@ -191,7 +191,7 @@ CHIME = Telescope(
     eta_a_ra = 0.5, eta_a_dec = 1.,
     primary_beam_baseline_ra = 20 * 100, primary_beam_baseline_dec = None,
     eta_sig = 1.,
-    T_rec_raw = 20.,
+    T_rec_raw = 40.,
     t_obs_days = 5 * 365.25,
 )
 
