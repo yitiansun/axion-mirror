@@ -99,6 +99,18 @@ def GCxyz_stz(stz):
     return jnp.stack([x, y, z], axis=-1)
 
 
+def GCstz_xyz(xyz):
+    """Galactic center cylindrical coordinates (s, t, z) [L, rad, L] from
+    Galactic center cartesian coordinates (x, y, z) [L, L, L]. Vectorized
+    manually; batch dimension is the first dimension.
+    """
+    x, y, z = xyz[:,0], xyz[:,1], xyz[:,2]
+    s = jnp.sqrt(x**2 + y**2)
+    t = jnp.arctan2(y, x)
+    # z = z
+    return jnp.stack([s, t, z], axis=-1)
+
+
 def LOS_direction(xyz):
     """Line of sight direction (radially outward) of xyz coordinates, in xyz
     coordinates. [kpc] Vectorized manually; batch dimension is the first

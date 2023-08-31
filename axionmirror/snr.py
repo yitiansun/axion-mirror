@@ -337,11 +337,15 @@ class SNR:
         )
     
     def Snu_t(self, nu, t):
-        """Switch between Snu_t_lightcurve and Snu_t_fl."""
+        """Switch between Snu_t_lightcurve and Snu_t_fl. Vectorized in t."""
         if self.use_lightcurve:
             return self.Snu_t_lightcurve(nu, t)
         else:
             return self.Snu_t_fl(nu, t)
+        
+    def L_t(self, nu, t):
+        """Luminosity [erg/s/Hz] as a function of frequency nu [MHz] and time t [yr]. Vectorized in t."""
+        return 4*np.pi * (self.d*kpc)**2 * self.Snu_t(nu, t) * Jy * sec**2
         
     def Sgnu(self, nu):
         """Gegenschein flux [Jy] as a function of frequency nu [MHz]."""

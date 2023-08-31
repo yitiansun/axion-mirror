@@ -1,7 +1,7 @@
 """Functions for graveyard SNRs"""
 
 import sys
-import pickle
+import json
 from tqdm import tqdm
 
 import numpy as np
@@ -15,7 +15,7 @@ from axionmirror.units_constants import *
 from axionmirror.geometry import Glbd, GCstz, GCxyz_stz
 from axionmirror.stats import sample_from_pdf, sample_from_pdf_jax, poisson_process
 from axionmirror.nfw import rho_NFW
-from axionmirror.snr import SNR
+from axionmirror.snr import SNR, lightcurve_scale
 
 
 #===== rate =====
@@ -162,18 +162,16 @@ def sample_snr_d(rng_key, stz_pdf_func, l, b, lowerbound, upperbound, num_sample
 
 #===== spectral index =====
 
+si_fit_dict = json.load(open('../outputs/snr/si_fit_dict.json', 'r'))
 def sample_si(num_samples=1):
-    """See ../notebooks/snr_graveyard.ipynb"""
-    si_skewness, si_loc, si_scale = -1.2377486349155773, 0.5991927451179504, 0.1894835347218209
-    return stats.skewnorm.rvs(si_skewness, loc=si_loc, scale=si_scale, size=num_samples)
+    return stats.skewnorm.rvs(si_fit_dict['skewness'], loc=si_fit_dict['loc'], scale=si_fit_dict['scale'], size=num_samples)
 
 
 #===== size =====
 
+size_fit_dict = json.load(open('../outputs/snr/size_fit_dict.json', 'r'))
 def sample_size_1kyr(num_samples=1):
-    """See ../notebooks/snr_graveyard.ipynb"""
-    size_skewness, size_loc, size_scale = 9.383925762403216, 0.0036672822153501466, 0.010441241123269699
-    return stats.skewnorm.rvs(size_skewness, loc=size_loc, scale=size_scale, size=num_samples)
+    return stats.skewnorm.rvs(size_fit_dict['skewness'], loc=size_fit_dict['loc'], scale=size_fit_dict['scale'], size=num_samples)
 
 def sample_size_now(num_samples=1, t_now=...):
     """t_now in [yr], can be a vector."""
@@ -182,17 +180,48 @@ def sample_size_now(num_samples=1, t_now=...):
 
 #===== lightcurve =====
 
+t_pk_mean = 50 / 365.25 # [yr]
+t_pk_stddex = 0.9 # [1]
+L_pk_mean = 3e25 # [erg/s/Hz]
+L_pk_stddex = 1.5 # [1]
+
+def log10_t_pk_pdf(log10_t_pk):
+    """Unnormalized pdf for log_10(t_pk/yr), can be a vector."""
+    return np.exp(- (log10_t_pk - np.log10(t_pk_mean))**2 / (2 * t_pk_stddex**2))
+
+def log10_L_pk_pdf(log10_L_pk):
+    """Unnormalized pdf for L_pk in [erg/s/Hz], can be a vector."""
+    return np.exp(- (log10_L_pk - np.log10(L_pk_mean))**2 / (2 * L_pk_stddex**2))
+
 def sample_t_pk(num_samples=1):
-    
-    t_pk_mean = 50 # [day]
-    t_pk_stddex = 0.9 # [1]
-    return 10**(stats.norm.rvs(loc=np.log10(t_pk_mean), scale=t_pk_stddex, size=num_samples)) / 365.25 # [yr]
+    """Sample t_pk [yr]"""
+    return 10**(stats.norm.rvs(loc=np.log10(t_pk_mean), scale=t_pk_stddex, size=num_samples))
 
 def sample_L_pk(num_samples=1):
-    
-    L_pk_mean = 3e25 # [erg/s/Hz]
-    L_pk_stddex = 1.5 # [1]
+    """Sample L_pk [erg/s/Hz]"""
     return 10**(stats.norm.rvs(loc=np.log10(L_pk_mean), scale=L_pk_stddex, size=num_samples))
+
+def sample_t_pk_L_pk(snr, tiop='2', num_samples=1):
+    """Sample t_pk [yr] conditioned on Snu(now)"""
+
+    def L_pk(t_pk):
+        """Vectorized in t_pk."""
+        # part of the build function
+        p   = 2*snr.si+1 # si determines p
+        ti1 = -2*(p+1)/5
+        ti2 = -4*p/5
+        ti  = ti1 if tiop=='1' else ti2 # ti < 0
+        Snu1GHz_t_free = snr.Snu1GHz * (snr.t_now/snr.t_free)**(-ti)
+        Snu1GHz_pk = Snu1GHz_t_free / lightcurve_scale(t_pk, snr.t_free)
+        Snu6p3GHz_pk = Snu1GHz_pk * (6.3/1)**(-snr.si)
+        L_pk = 4*np.pi * (snr.d*kpc)**2 * Snu6p3GHz_pk * Jy * sec**2
+        return L_pk
+
+    def conditioned_log10_t_pk_pdf(log10_t_pk):
+        return log10_t_pk_pdf(log10_t_pk) * log10_L_pk_pdf(np.log10(L_pk(10**log10_t_pk)))
+    
+    log10_t_pk = sample_from_pdf(conditioned_log10_t_pk_pdf, np.log10(t_pk_mean/1e4), np.log10(snr.t_free), num_samples)
+    return 10**log10_t_pk
 
 def sample_Snu1GHz_pk(num_samples=1, si=..., d=...):
     """d in [kpc]. d and si can be vectors."""
@@ -202,27 +231,26 @@ def sample_Snu1GHz_pk(num_samples=1, si=..., d=...):
     
 #===== t_now (age) =====
 
+log10age_fit_dict = json.load(open('../outputs/snr/log10age_fit_dict.json', 'r'))
 def sample_t_now(num_samples=1):
-    """See ../notebooks/snr_graveyard.ipynb"""
-    log10age_skewness, log10age_loc, log10age_scale = 0.9475698171302935, 3.5585998647723156, 0.6187394571802789
-    return 10**stats.skewnorm.rvs(log10age_skewness, loc=log10age_loc, scale=log10age_scale, size=num_samples)
+    return 10**stats.skewnorm.rvs(log10age_fit_dict['skewness'], loc=log10age_fit_dict['loc'], scale=log10age_fit_dict['scale'], size=num_samples)
 
 
 #===== t_free =====
 
-def sample_t_free(num_samples=1):
-    """See ../notebooks/snr_graveyard.ipynb"""
-    t_free_skewness, t_free_loc, t_free_scale = -0.4409101842885288, 2.322143632416538, 0.8307012289498359
-    return 10**stats.skewnorm.rvs(t_free_skewness, loc=t_free_loc, scale=t_free_scale, size=num_samples)
+# def sample_t_free(num_samples=1):
+#     """See ../notebooks/snr_graveyard.ipynb"""
+#     t_free_skewness, t_free_loc, t_free_scale = -0.4409101842885288, 2.322143632416538, 0.8307012289498359
+#     return 10**stats.skewnorm.rvs(t_free_skewness, loc=t_free_loc, scale=t_free_scale, size=num_samples)
 
 def fixed_t_free(value='est'):
     """[yr]"""
     if value == 'est':
-        return 300.
-    elif value == 'upper':
         return 100.
+    elif value == 'upper':
+        return 30.
     elif value == 'lower':
-        return 1000.
+        return 300.
     else:
         raise ValueError(value)
     
