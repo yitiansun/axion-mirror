@@ -53,7 +53,7 @@ if __name__ == "__main__":
                     sig_samples += np.load(f'{pc.save_dir}/{snr_pop}/{snr_pop}-{pc.postfix}.npy')
                 
                 snratio_samples_map = (sig_samples / bkg) * np.sqrt(
-                    2 * dnu(pc.nu) * 1e6 * exposure
+                    pc.telescope.n_pol * dnu(pc.nu) * 1e6 * exposure
                 ) # (sample, dec, ra)
                 
                 snratio_samples = np.sqrt(np.sum(snratio_samples_map**2, axis=(1, 2))) # (sample,)

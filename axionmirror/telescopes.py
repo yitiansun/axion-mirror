@@ -15,7 +15,7 @@ data_dir = "../data"
 @dataclass
 class Telescope:
     """
-    A dataclass for drift scan telescopes.
+    A dataclass for drift scan dish telescopes.
 
     Args:
         name (str)
@@ -37,6 +37,7 @@ class Telescope:
         eta_sig (float): Signal chain efficiency.
         T_rec_raw (float): Raw receiver temperature [K].
         t_obs_days (float): Observation time [day].
+        n_pol (int): Number of polarizations observed.
 
     Note:
         Default length measurements are in [cm], angles are in [rad], temperature is in [K].
@@ -61,6 +62,7 @@ class Telescope:
     eta_sig: float
     T_rec_raw: float
     t_obs_days: float
+    n_pol: int
 
         
     def ra_pixel_size(self, nu, ra):
@@ -170,11 +172,66 @@ class Telescope:
             pixel_size = (uc.c0 / nu) ** 2 / self.Aeff_zenith # [rad^2]
             n_pixel = self.survey_area(nu) / pixel_size
             t_obs = self.t_obs(nu, self.dec)
-            snratio_per_pixel = T_sig * (nu/nu_haslam)**si_sig / (T_bkg * (nu/nu_haslam)**si_bkg + self.T_rec) * np.sqrt(2 * dnu(nu) * 1e6 * t_obs)
+            snratio_per_pixel = T_sig * (nu/nu_haslam)**si_sig / (T_bkg * (nu/nu_haslam)**si_bkg + self.T_rec) * np.sqrt(self.n_pol * dnu(nu) * 1e6 * t_obs)
             snratio = np.sqrt(n_pixel) * snratio_per_pixel
             gagg_s[i_nu] = (uc.gagg_CAST/uc.invGeV) / np.sqrt(snratio)
 
         return gagg_s
+
+
+@dataclass
+class AntennaArray (Telescope):
+    """
+    A dataclass for drift scan antenna arrays.
+
+    Args:
+        fixed_primary_beam_size_ra (float): Fixed primary beam size in right ascension [rad]. If None, use primary beam baseline.
+        fixed_primary_beam_size_dec (float): Fixed primary beam size in declination [rad]. If None, use primary beam baseline.
+        n_element_ra (int): Number of elements in right ascension.
+        n_element_dec (int): Number of elements in declination.
+    """
+
+    fixed_primary_beam_size_ra: float
+    fixed_primary_beam_size_dec: float
+    n_element_ra: int
+    n_element_dec: int
+
+    def ra_pixel_size(self, nu, ra):
+        """Pixel size in right ascension [rad]."""
+        return self.fixed_primary_beam_size_ra / self.n_element_ra
+    
+    def dec_pixel_size(self, nu, dec):
+        """Pixel size in declination [rad]."""
+        return self.fixed_primary_beam_size_dec / (self.n_element_dec * np.cos(dec - self.dec) * np.cos(dec))
+    
+    def primary_beam_size_ra(self, nu):
+        """Primary beam size in right ascension direction (but not in right ascension coordinates) [rad]."""
+        return self.fixed_primary_beam_size_ra
+    
+    def primary_beam_size_dec(self, nu):
+        """Primary beam size in declination [rad]."""
+        return self.fixed_primary_beam_size_dec
+    
+    def survey_za_max(self, nu):
+        """Maximum survey zenith angle [rad]."""
+        return self.primary_beam_size_dec(nu) / 2
+    
+    @property
+    def Aeff_zenith(self):
+        """Effective area at zenith [cm^2]."""
+        return None
+    
+    def Aeff(self, dec):
+        """Effective area [cm^2]."""
+        return None
+        
+    def figure_of_merit(self, nu):
+        """Figure of merit sqrt(Aeff * FOV)."""
+        return None
+    
+    def sens_estimate(self, nu_s):
+        """Crude estimate of g_agg sensitivity [GeV^-1] at given frequencies [MHz]."""
+        return None
     
 
 #===== telescope instances =====
@@ -193,6 +250,7 @@ CHIME = Telescope(
     eta_sig = 1.,
     T_rec_raw = 40.,
     t_obs_days = 5 * 365.25,
+    n_pol = 2,
 )
 
 HERA = Telescope(
@@ -209,6 +267,7 @@ HERA = Telescope(
     eta_sig = 1.,
     T_rec_raw = 100.,
     t_obs_days = 5 * 365.25,
+    n_pol = 2,
 )
 
 CHORD = Telescope(
@@ -225,6 +284,7 @@ CHORD = Telescope(
     eta_sig = 1.,
     T_rec_raw = 30.,
     t_obs_days = 5 * 365.25,
+    n_pol = 2,
 )
 
 HIRAX256 = Telescope(
@@ -241,6 +301,7 @@ HIRAX256 = Telescope(
     eta_sig = 1.,
     T_rec_raw = 50.,
     t_obs_days = 5 * 365.25,
+    n_pol = 2,
 )
 
 HIRAX1024 = Telescope(
@@ -257,22 +318,30 @@ HIRAX1024 = Telescope(
     eta_sig = 1.,
     T_rec_raw = 50.,
     t_obs_days = 5 * 365.25,
+    n_pol = 2,
 )
 
-BURSTT256 = Telescope(
+BURSTT256 = AntennaArray(
     name = 'BURSTT256',
     nu_min = 300, nu_max = 800,
     dec = np.deg2rad(23.7),
     pointing = False,
     survey_ra_max = 2*np.pi, survey_ra_min = 0.,
-    fixed_survey_za_max = np.deg2rad(50),
-    size_ra = 16 * 2 * 100, size_dec = 16 * 2 * 100,
-    eta_f_ra = np.sqrt(1), eta_f_dec = np.sqrt(1),
-    eta_a_ra = np.sqrt(0.134), eta_a_dec = np.sqrt(0.134),
-    primary_beam_baseline_ra = 2 * 100, primary_beam_baseline_dec = 2 * 100,
+
+    fixed_survey_za_max = None,
+    size_ra = None, size_dec = None,
+    eta_f_ra = None, eta_f_dec = None,
+    eta_a_ra = None, eta_a_dec = None,
+    primary_beam_baseline_ra = None, primary_beam_baseline_dec = None,
+    
+    fixed_primary_beam_size_ra = np.deg2rad(60),
+    fixed_primary_beam_size_dec = np.deg2rad(60),
+    n_element_ra = 16,
+    n_element_dec = 16,
     eta_sig = 1.,
     T_rec_raw = 30.,
     t_obs_days = 5 * 365.25,
+    n_pol = 1,
 )
 
 BURSTT2048 = Telescope(
@@ -281,12 +350,19 @@ BURSTT2048 = Telescope(
     dec = np.deg2rad(23.7),
     pointing = False,
     survey_ra_max = 2*np.pi, survey_ra_min = 0.,
-    fixed_survey_za_max = np.deg2rad(50),
-    size_ra = 45 * 2 * 100, size_dec = 45 * 2 * 100,
-    eta_f_ra = np.sqrt(1), eta_f_dec = np.sqrt(1),
-    eta_a_ra = np.sqrt(0.134), eta_a_dec = np.sqrt(0.134),
-    primary_beam_baseline_ra = 2 * 100, primary_beam_baseline_dec = 2 * 100,
+
+    fixed_survey_za_max = None,
+    size_ra = None, size_dec = None,
+    eta_f_ra = None, eta_f_dec = None,
+    eta_a_ra = None, eta_a_dec = None,
+    primary_beam_baseline_ra = None, primary_beam_baseline_dec = None,
+
+    fixed_primary_beam_size_ra = np.deg2rad(60),
+    fixed_primary_beam_size_dec = np.deg2rad(60),
+    n_element_ra = 45,
+    n_element_dec = 45,
     eta_sig = 1.,
     T_rec_raw = 30.,
     t_obs_days = 5 * 365.25,
+    n_pol = 1,
 )
