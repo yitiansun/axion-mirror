@@ -7,6 +7,7 @@ import numpy as np
 from astropy.io import fits
 from astropy import units as u
 from astropy.coordinates import SkyCoord
+import pandas as pd
 
 
 @dataclass
@@ -153,4 +154,48 @@ def egrs_list_keuhr(include_cygA=True):
         )
         egrs_list.append(cygA)
         
+    return egrs_list
+
+
+def egrs_list_cora():
+
+    df = pd.read_csv('../data/egrs/cora/combinedps_egrs.dat', delim_whitespace=True)
+
+    egrs_list = []
+    for _, row in df.iterrows():
+        name = row['NAME']
+        if name.startswith('?'):
+            continue
+        ra = row['RA']
+        dec = row['DEC']
+        coord = SkyCoord(ra=ra, dec=dec, unit='deg', frame='icrs')
+        egrs = EGRS(
+            name = name,
+            l = coord.galactic.l.rad,
+            b = coord.galactic.b.rad,
+            ra = ra,
+            dec = dec,
+            spec = np.array([[74., row['S74']], [600., row['S600']], [1400., row['S1400']]])
+        )
+        egrs_list.append(egrs)
+
+    return egrs_list
+
+
+def concat_with_exclusion(egrs_list_1, egrs_list_2, exclude_radius=1.):
+    """Concatenate egrs_list_1 and egrs_list_2, excluding sources in egrs_list_2 within exclude_radius [deg] of existing sources."""
+    egrs_list = [egrs for egrs in egrs_list_1]
+
+    l_s = np.array([egrs.l for egrs in egrs_list_1])
+    b_s = np.array([egrs.b for egrs in egrs_list_1])
+    for egrs in egrs_list_2:
+        l = egrs.l
+        b = egrs.b
+        if np.all(np.sqrt((l_s - l)**2 + (b_s - b)**2) > exclude_radius):
+            egrs_list.append(egrs)
+
+    return egrs_list
+
+def egrs_list_all():
+    egrs_list = concat_with_exclusion(egrs_list_keuhr(), egrs_list_cora())
     return egrs_list
