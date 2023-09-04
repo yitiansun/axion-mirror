@@ -4,6 +4,7 @@
 estimates/slurm_outputs/
 outputs/snr/*samples*/
 outputs/plot_graveyard_samples/
+**/slurm/
 #========================
 
 # Byte-compiled / optimized / DLL files

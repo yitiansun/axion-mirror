@@ -257,10 +257,29 @@ def fixed_t_free(value='est'):
 
 #===== full graveyard sample =====
     
-def sample_graveyard_snrs(t_cutoff=100000, verbose=1, build=False):
+def sample_graveyard_snrs(t_cutoff=100000, verbose=1, build=False, var_flag=''):
     """t_cutoff in [yr], set at end of adiabatic phase typically."""
 
-    t_now_arr = np.array(poisson_process(snr_forming_rate_tot(), t_cutoff))
+    if var_flag == 'ti1':
+        tiop = '1'
+    else:
+        tiop = '2'
+
+    if var_flag == 'tf30':
+        t_free = 30. # [yr]
+    elif var_flag == 'tf300':
+        t_free = 300. # [yr]
+    else:
+        t_free = 100. # [yr]
+
+    if var_flag == 'srhigh':
+        snr_rate_str = 'upper'
+    elif var_flag == 'srlow':
+        snr_rate_str = 'lower'
+    else:
+        snr_rate_str = 'est'
+
+    t_now_arr = np.array(poisson_process(snr_forming_rate_tot(value=snr_rate_str), t_cutoff))
     n_snr = len(t_now_arr)
     if verbose >= 1:
         print(f'n_snr={n_snr}')
@@ -271,7 +290,7 @@ def sample_graveyard_snrs(t_cutoff=100000, verbose=1, build=False):
     L_pk_arr = sample_L_pk(n_snr)
     t_pk_arr = sample_t_pk(n_snr)
     #t_free_arr = sample_t_free(n_snr)
-    t_free_arr = np.full((n_snr,), fixed_t_free())
+    t_free_arr = np.full((n_snr,), t_free)
     Snu1GHz_pk_arr = sample_Snu1GHz_pk(n_snr, si=si_arr, d=lbd_arr[:, 2])
     
     snr_list = []
@@ -290,6 +309,6 @@ def sample_graveyard_snrs(t_cutoff=100000, verbose=1, build=False):
             si = si_arr[i],
         )
         if build:
-            snr.build(rho_DM=rho_NFW, use_lightcurve=True, integrate_method='trapz')
+            snr.build(rho_DM=rho_NFW, use_lightcurve=True, integrate_method='trapz', tiop=tiop)
         snr_list.append(snr)
     return snr_list

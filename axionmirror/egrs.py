@@ -182,8 +182,8 @@ def egrs_list_cora():
     return egrs_list
 
 
-def concat_with_exclusion(egrs_list_1, egrs_list_2, exclude_radius=1.):
-    """Concatenate egrs_list_1 and egrs_list_2, excluding sources in egrs_list_2 within exclude_radius [deg] of existing sources."""
+def concat_with_exclusion(egrs_list_1, egrs_list_2, exclude_radius=np.deg2rad(1.)):
+    """Concatenate egrs_list_1 and egrs_list_2, excluding sources in egrs_list_2 within exclude_radius [rad] of existing sources."""
     egrs_list = [egrs for egrs in egrs_list_1]
 
     l_s = np.array([egrs.l for egrs in egrs_list_1])
