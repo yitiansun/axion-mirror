@@ -12,7 +12,7 @@ import axionmirror.units_constants as uc
 from axionmirror.nfw import rho_integral
 from axionmirror.spectral import prefac
 from axionmirror.map_utils import antipodal_map
-from axionmirror.egrs import egrs_list_keuhr
+from axionmirror.egrs import egrs_list_all
 
 os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 
@@ -21,11 +21,11 @@ def egrs(pc):
     """Makes signal maps for extragalactic radio sources (EGRSs)."""
     
     #===== settings =====
-    smooth=False
+    smooth = False
     include_forwardschein = False
     
     #===== extragalactic radio source map =====
-    egrs_list = egrs_list_keuhr()
+    egrs_list = egrs_list_all()
     egrs_map = np.zeros_like(pc.ra_grid)
 
     for egrs in egrs_list:

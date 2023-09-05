@@ -1,7 +1,5 @@
 import sys
 
-import numpy as np
-
 sys.path.append("..")
 from axionmirror.telescopes import CHIME, HERA, CHORD, HIRAX256, HIRAX1024, BURSTT256, BURSTT2048
 from axionmirror.pixel import PixelConfig

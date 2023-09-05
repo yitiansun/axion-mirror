@@ -344,7 +344,7 @@ BURSTT256 = AntennaArray(
     n_pol = 1,
 )
 
-BURSTT2048 = Telescope(
+BURSTT2048 = AntennaArray(
     name = 'BURSTT2048',
     nu_min = 300, nu_max = 800,
     dec = np.deg2rad(23.7),

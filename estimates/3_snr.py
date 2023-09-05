@@ -14,7 +14,7 @@ from axionmirror.snr import load_snr_list, add_image_to_map
 os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 
 
-def snr(pc, snr_pop=..., snr_list_samples=...):
+def snr(pc, snr_pop=..., snr_list_samples=..., var_flag=...):
     """Makes signal maps for supernova remnants (SNRs)."""
     
     #===== settings =====
@@ -68,7 +68,7 @@ def snr(pc, snr_pop=..., snr_list_samples=...):
     sig_temp_map_snr_samples = np.array(sig_temp_map_snr_samples)
 
     #===== save =====
-    temp_name = f'snr-{snr_pop}'
+    temp_name = f'snr-{snr_pop}-{var_flag}'
     temp_map = sig_temp_map_snr_samples
     os.makedirs(f"{pc.save_dir}/{temp_name}", exist_ok=True)
     np.save(f'{pc.save_dir}/{temp_name}/{temp_name}-{pc.postfix}.npy', temp_map)
@@ -79,14 +79,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, required=True, help='config')
     parser.add_argument('--pop', type=str, required=True, help='{fullinfo, partialinfo, graveyard}')
+    parser.add_argument('--var', type=str, default='base', help='{base, ti1, tf30, tf300, srhigh, srlow}')
     args = parser.parse_args()
     
     pc = pc_dict[args.config]
-    snr_pop = args.pop
     
     snr_list_samples = []
     for i_sample in tqdm(range(100)):
         snr_list_samples.append(
-            load_snr_list(f"../outputs/snr/{snr_pop}_samples/{snr_pop}_{i_sample}.json")
+            load_snr_list(f"../outputs/snr/{args.pop}_samples_{args.var}/{args.pop}_{i_sample}.json")
         )
-    pc.iter_over_func(snr, snr_pop=snr_pop, snr_list_samples=snr_list_samples)
+    pc.iter_over_func(snr, snr_pop=args.pop, snr_list_samples=snr_list_samples, var_flag=args.var)
