@@ -79,7 +79,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, required=True, help='config')
     parser.add_argument('--pop', type=str, required=True, help='{fullinfo, partialinfo, graveyard}')
-    parser.add_argument('--var', type=str, default='base', help='{base, ti1, tf30, tf300, srhigh, srlow}')
+    parser.add_argument('--var', type=str, default='base', help='variation flag')
     args = parser.parse_args()
     
     pc = pc_dict[args.config]

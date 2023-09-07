@@ -10,6 +10,7 @@
 | snrf  | BETR  | BETR  | BETR  |   BETR   |   BETR    |   BETR    |   BETR     |
 | snrp  | BETR  | BETR  | BETR  |   BETR   |   BETR    |   BETR    |   BETR     |
 | snrg  | BETR  | BETR  | BETR  |   BETR   |   BETR    |   BETR    |   BETR     |
+| snro  | BETR  | BETR  | BETR  |          |           |           |            |
 | reach | BETR  | BETR  | BETR  |   BETR   |   BETR    |   BETR    |   BETR     |
 
 - B: base

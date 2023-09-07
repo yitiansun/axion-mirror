@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, required=True, help='config')
-    parser.add_argument('--src', nargs='+', required=True, help='subset of [egrs, gsr, snr-fullinfo-var, snr-partialinfo-var, snr-graveyard-var]')
+    parser.add_argument('--src', nargs='+', required=True, help='subset of [egrs, gsr, snr-fullinfo-var, snr-partialinfo-var, snr-graveyard-var, snr-obs-var]')
     parser.add_argument('--save', type=str, required=True, help='save name')
     args = parser.parse_args()
 
