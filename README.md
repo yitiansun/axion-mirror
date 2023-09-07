@@ -11,7 +11,7 @@
 | snrp  | BETR  | BETR  | BETR  |   BETR   |   BETR    |   BETR    |   BETR     |
 | snrg  | BETR  | BETR  | BETR  |   BETR   |   BETR    |   BETR    |   BETR     |
 | snro  | BETR  | BETR  | BETR  |          |           |           |            |
-| reach | BETR  | BETR  | BETR  |   BETR   |   BETR    |   BETR    |   BETR     |
+| reach | BETR  | BETR  | BETR  |   B      |   B       |   B       |   B        |
 
 - B: base
 - E: ti - time index / electron model
