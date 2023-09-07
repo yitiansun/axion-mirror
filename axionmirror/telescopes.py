@@ -134,12 +134,11 @@ class Telescope:
         
         return self.t_obs_days * t_obs_per_day
     
-    @property
-    def Aeff_zenith(self):
+    def Aeff_zenith(self, nu):
         """Effective area at zenith [cm^2]."""
         return self.eta_a_ra * self.eta_a_dec * self.eta_f_ra * self.eta_f_dec * self.size_ra * self.size_dec
     
-    def Aeff(self, dec):
+    def Aeff(self, nu, dec):
         """Effective area [cm^2]."""
         return self.Aeff_zenith * np.cos(dec - self.dec)
     
@@ -154,12 +153,16 @@ class Telescope:
         else:
             return self.primary_beam_size_ra(nu) * 2 * self.survey_za_max(nu)
         
-    def figure_of_merit(self, nu):
-        """Figure of merit sqrt(Aeff * FOV)."""
-        return np.sqrt(self.Aeff_zenith * self.instantaneous_fov(nu))
+    def eff_etendue(self, nu):
+        """Effective etendue [cm^2 sr]."""
+        return self.Aeff_zenith(nu) * self.instantaneous_fov(nu)
+    
+    def merit(self, nu):
+        """Figure of merit [arbitrary]."""
+        return np.sqrt(self.n_pol * self.eff_etendue(nu))
     
     def sens_estimate(self, nu_s):
-        """Crude estimate of g_agg sensitivity [GeV^-1] at given frequencies [MHz]."""
+        """Estimate of g_agg sensitivity [GeV^-1] at given frequencies [MHz]."""
         T_sig = 1.5e-5 # [K] at 408 MHz
         si_sig = -2.5 # S ~ nu^2 T Omega ~ nu^2 T lambda^2 ~ T. ??
         T_bkg = 35 # [K] at 408 MHz, mean of Haslam map
@@ -169,7 +172,7 @@ class Telescope:
         gagg_s = np.zeros_like(nu_s)
 
         for i_nu, nu in enumerate(nu_s):
-            pixel_size = (uc.c0 / nu) ** 2 / self.Aeff_zenith # [rad^2]
+            pixel_size = (uc.c0 / nu) ** 2 / self.Aeff_zenith(nu) # [rad^2]
             n_pixel = self.survey_area(nu) / pixel_size
             t_obs = self.t_obs(nu, self.dec)
             snratio_per_pixel = T_sig * (nu/nu_haslam)**si_sig / (T_bkg * (nu/nu_haslam)**si_bkg + self.T_rec) * np.sqrt(self.n_pol * dnu(nu) * 1e6 * t_obs)
@@ -216,22 +219,12 @@ class AntennaArray (Telescope):
         """Maximum survey zenith angle [rad]."""
         return self.primary_beam_size_dec(nu) / 2
     
-    @property
-    def Aeff_zenith(self):
+    def Aeff_zenith(self, nu):
         """Effective area at zenith [cm^2]."""
-        return None
-    
-    def Aeff(self, dec):
-        """Effective area [cm^2]."""
-        return None
-        
-    def figure_of_merit(self, nu):
-        """Figure of merit sqrt(Aeff * FOV)."""
-        return None
-    
-    def sens_estimate(self, nu_s):
-        """Crude estimate of g_agg sensitivity [GeV^-1] at given frequencies [MHz]."""
-        return None
+        lmd = uc.c0 / nu # [cm]
+        baseline_ra = lmd / self.fixed_primary_beam_size_ra
+        baseline_dec = lmd / self.fixed_primary_beam_size_dec
+        return baseline_ra * baseline_dec * self.n_element_ra * self.n_element_dec
     
 
 #===== telescope instances =====

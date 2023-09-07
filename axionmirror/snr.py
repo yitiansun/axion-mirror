@@ -89,7 +89,8 @@ def add_image_to_map(fullmap, ra_s, dec_s, ra_edges, dec_edges, pixel_area_map,
         else:
             tmpl = gaussian_val(image_sigma, source_ra, source_dec, ra_subgrid, dec_subgrid)
     pixel_area_submap = pixel_area_map[i_dec_st:i_dec_ed, i_ra_st:i_ra_ed]
-    tmpl = np.array(tmpl) * np.cos(dec_s[i_dec_st:i_dec_ed])[:,None]# * pixel_area_submap
+    #tmpl = np.array(tmpl) * np.cos(dec_s[i_dec_st:i_dec_ed])[:,None]
+    tmpl = np.array(tmpl) * pixel_area_submap
     tmpl /= np.sum(tmpl)
 
     #T_submap = snr.Sgnu(freq)*Jy * tmpl * c0**2 / (2 * freq**2 * pixel_area_submap * kb)

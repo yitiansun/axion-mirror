@@ -25,6 +25,7 @@ class EGRS:
         si (float): Spectral index.
         min_extrap_freq (float): Minimum frequency in extrapolation [MHz].
         max_extrap_freq (float): Maximum frequency in extrapolation [MHz].
+        catalog (str): Catalog name.
     """
     name: str = None
     l: float = None # [rad] | galactic longitude
@@ -35,6 +36,7 @@ class EGRS:
     si: float = None
     min_extrap_freq: ClassVar[float] = 30 # [MHz]
     max_extrap_freq: ClassVar[float] = 1500 # [MHz]
+    catalog: str = None
     
     def __post_init__(self):
         self.spec = self.spec[np.argsort(self.spec[:,0])]
@@ -55,6 +57,19 @@ class EGRS:
     @property
     def max_data_Snu(self):
         return self.spec[-1,1]
+    
+    @property
+    def anti_ra(self):
+        return self.ra + np.pi if self.ra < np.pi else self.ra - np.pi
+    @property
+    def anti_dec(self):
+        return - self.dec
+    @property
+    def anti_l(self):
+        return self.l + np.pi if self.l < np.pi else self.l - np.pi
+    @property
+    def anti_b(self):
+        return - self.b
         
     def Snu_no_extrap(self, nu):
         """
@@ -134,6 +149,7 @@ def egrs_list_keuhr(include_cygA=True):
             spec = np.stack([data[i_d:i_d_end]['FREQUENCY'],
                              data[i_d:i_d_end]['FLUX_RADIO']/1000.], axis=-1),
             si = d['SPECTRAL_INDEX'],
+            catalog = 'keuhr',
         )
         egrs_list.append(egrs)
 
@@ -151,6 +167,7 @@ def egrs_list_keuhr(include_cygA=True):
             dec = c.icrs.dec.rad,
             spec = np.loadtxt('../data/egrs/cygA_spec.txt'),
             si = None,
+            catalog = 'Cyg A',
         )
         egrs_list.append(cygA)
         
@@ -166,16 +183,17 @@ def egrs_list_cora():
         name = row['NAME']
         if name.startswith('?'):
             continue
-        ra = row['RA']
-        dec = row['DEC']
-        coord = SkyCoord(ra=ra, dec=dec, unit='deg', frame='icrs')
+        ra = np.deg2rad(row['RA'])
+        dec = np.deg2rad(row['DEC'])
+        coord = SkyCoord(ra=ra, dec=dec, unit='rad', frame='icrs')
         egrs = EGRS(
             name = name,
             l = coord.galactic.l.rad,
             b = coord.galactic.b.rad,
             ra = ra,
             dec = dec,
-            spec = np.array([[74., row['S74']], [600., row['S600']], [1400., row['S1400']]])
+            spec = np.array([[74., row['S74']], [600., row['S600']], [1400., row['S1400']]]),
+            catalog = 'cora',
         )
         egrs_list.append(egrs)
 

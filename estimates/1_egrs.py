@@ -11,13 +11,12 @@ sys.path.append("..")
 import axionmirror.units_constants as uc
 from axionmirror.nfw import rho_integral
 from axionmirror.spectral import prefac
-from axionmirror.map_utils import antipodal_map
 from axionmirror.egrs import egrs_list_all
 
 os.environ["XLA_FLAGS"] = "--xla_gpu_force_compilation_parallelism=1"
 
 
-def egrs(pc):
+def egrs(pc, verbose=False):
     """Makes signal maps for extragalactic radio sources (EGRSs)."""
     
     #===== settings =====
@@ -28,26 +27,46 @@ def egrs(pc):
     egrs_list = egrs_list_all()
     egrs_map = np.zeros_like(pc.ra_grid)
 
+    n_included_keuhr = 0
+    n_included_cygA = 0
+    n_included_cora = 0
+    n_total_keuhr = np.sum([egrs.catalog == 'keuhr' for egrs in egrs_list])
+    n_total_cygA = np.sum([egrs.catalog == 'Cyg A' for egrs in egrs_list])
+    n_total_cora = np.sum([egrs.catalog == 'cora' for egrs in egrs_list])
+
     for egrs in egrs_list:
         
-        if egrs.dec < pc.dec_edges[0] or egrs.dec > pc.dec_edges[-1]:
+        if egrs.anti_dec < pc.dec_edges[0] or egrs.anti_dec > pc.dec_edges[-1]:
             continue
-        i_dec = np.searchsorted(pc.dec_edges, egrs.dec) - 1
-        i_ra  = np.searchsorted(pc.ra_edges, egrs.ra) - 1
+
+        if egrs.catalog == 'keuhr':
+            n_included_keuhr += 1
+        elif egrs.catalog == 'Cyg A':
+            n_included_cygA += 1
+        elif egrs.catalog == 'cora':
+            n_included_cora += 1
+
+        i_dec = np.searchsorted(pc.dec_edges, egrs.anti_dec) - 1
+        i_ra  = np.searchsorted(pc.ra_edges, egrs.anti_ra) - 1
         delta_dec = np.diff(pc.dec_edges)[i_dec]
         delta_ra  = np.diff(pc.ra_edges)[i_ra]
         
-        pixel_area = delta_dec * delta_ra * np.cos(egrs.dec) # [rad^2]
+        pixel_area = delta_dec * delta_ra * np.cos(egrs.anti_dec) # [rad^2]
         I = egrs.Snu_no_extrap(pc.nu)/pixel_area # [Jy sr^-1]
         # I = 2 * nu^2 kb T / c0^2
         # [MHz^2 g sr^-1] = [MHz^2] [cm^2 MHz^2 g] [cm^-2 MHz^-2]
         T = I * uc.Jy / (2 * pc.nu**2 * uc.kb / uc.c0**2)
         
         egrs_map[i_dec, i_ra] += T
-        
+
+    if verbose:
+        print(f'keuhr: {n_included_keuhr}/{n_total_keuhr}', end=' ')
+        print(f'cygA: {n_included_cygA}/{n_total_cygA}', end=' ')
+        print(f'cora: {n_included_cora}/{n_total_cora}')
+    
     #===== rho_DM =====
     rho_integral_map = rho_integral(pc.lb_flat).reshape(pc.radec_shape)
-    gegen_map = prefac(pc.nu) * antipodal_map(egrs_map) * rho_integral_map
+    gegen_map = prefac(pc.nu) * egrs_map * rho_integral_map
     total_map = gegen_map
     if include_forwardschein:
         forward_map = prefac(pc.nu) * egrs_map * rho_integral_map
@@ -79,7 +98,8 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, required=True, help='config')
+    parser.add_argument('--verbose', action='store_true', help='verbose')
     args = parser.parse_args()
     
     pc = pc_dict[args.config]
-    pc.iter_over_func(egrs)
+    pc.iter_over_func(egrs, verbose=args.verbose)

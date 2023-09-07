@@ -257,7 +257,7 @@ def fixed_t_free(value='est'):
 
 #===== full graveyard sample =====
     
-def sample_graveyard_snrs(t_cutoff=100000, verbose=1, build=False, var_flag=''):
+def sample_graveyard_snrs(t_cutoff=100000, verbose=1, build=False, var_flag='base'):
     """t_cutoff in [yr], set at end of adiabatic phase typically."""
 
     if var_flag == 'ti1':
@@ -287,28 +287,34 @@ def sample_graveyard_snrs(t_cutoff=100000, verbose=1, build=False, var_flag=''):
     lbd_arr = np.array(Glbd(sample_snr_stz_G(n_snr)), dtype=np.float64)
     si_arr = sample_si(n_snr)
     size_arr = sample_size_now(n_snr, t_now=t_now_arr)
-    L_pk_arr = sample_L_pk(n_snr)
     t_pk_arr = sample_t_pk(n_snr)
-    #t_free_arr = sample_t_free(n_snr)
     t_free_arr = np.full((n_snr,), t_free)
     Snu1GHz_pk_arr = sample_Snu1GHz_pk(n_snr, si=si_arr, d=lbd_arr[:, 2])
     
     snr_list = []
     for i in (tqdm(range(n_snr)) if verbose >= 1 else range(n_snr)):
         
-        snr = SNR(
-            ID = f'Graveyard-{i}',
-            l = lbd_arr[i, 0],
-            b = lbd_arr[i, 1],
-            d = lbd_arr[i, 2],
-            size = size_arr[i],
-            t_now = t_now_arr[i],
-            t_free = t_free_arr[i],
-            t_pk = t_pk_arr[i],
-            Snu1GHz_pk = Snu1GHz_pk_arr[i],
-            si = si_arr[i],
-        )
-        if build:
+        Snu1GHz_pk = Snu1GHz_pk_arr[i]
+        while True:
+            snr = SNR(
+                ID = f'Graveyard-{i}',
+                l = lbd_arr[i, 0],
+                b = lbd_arr[i, 1],
+                d = lbd_arr[i, 2],
+                size = size_arr[i],
+                t_now = t_now_arr[i],
+                t_free = t_free_arr[i],
+                t_pk = t_pk_arr[i],
+                Snu1GHz_pk = Snu1GHz_pk,
+                si = si_arr[i],
+            )
             snr.build(rho_DM=rho_NFW, use_lightcurve=True, integrate_method='trapz', tiop=tiop)
+            if snr.Snu_t(400., snr.t_now) < 4657.:
+                break
+            else:
+                if verbose >= 1:
+                    print(f'resampling {i}')
+                Snu1GHz_pk = sample_Snu1GHz_pk(1, si=si_arr[i], d=lbd_arr[i, 2])[0]
+            
         snr_list.append(snr)
     return snr_list
