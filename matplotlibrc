@@ -11,5 +11,4 @@ xtick.labelsize : 14
 ytick.labelsize : 14
 
 figure.dpi : 120
-
 savefig.bbox : tight

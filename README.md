@@ -13,7 +13,6 @@
 | snro (A2)       |   -   |   X   |   X   |   X   |    X     |           |     X     |            |
 | reach base (B1) |   -   |   X   |   X   |   X   |    X     |           |     X     |            |
 | reach var (B2)  |   -   |   X   |   X   |   X   |    X     |           |           |            |
-|-----------------|-------|-------|-------|-------|----------|-----------|-----------|------------|
 | snrfnf (A3)     |       |       |       |       |          |           |           |            |
 | reach fnf (A3)  |       |       |       |       |          |           |           |            |
 
@@ -22,8 +21,8 @@
 - T: tf - t_free
 - R: sr - snr rate
 
-f = fullinfo : BET
-p = partialinfo : BET
-o = observed = f+p : BET
-g = graveyard : BETR
-fnf = fullinfo no free expansion
+- f = fullinfo : BET
+- p = partialinfo : BET
+- o = observed = f+p : BET
+- g = graveyard : BETR
+- fnf = fullinfo no free expansion
