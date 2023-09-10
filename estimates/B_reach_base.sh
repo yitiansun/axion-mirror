@@ -20,4 +20,4 @@ python reach.py	--config $CONFIG --src snr-graveyard-base --save snrg-base
 echo 'reach total-base:'
 python reach.py	--config $CONFIG --src egrs gsr snr-fullinfo-base snr-partialinfo-base snr-graveyard-base --save total-base
 
-echo 'reach complete!'
+echo 'reach base complete!'

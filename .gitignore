@@ -2,6 +2,8 @@
 **/.DS_Store
 .tmp.driveupload/
 estimates/slurm_outputs/
+outputs/plot_data/
+outputs/reach_plots/
 outputs/snr/*samples*/
 outputs/plot_graveyard_samples/
 **/slurm/

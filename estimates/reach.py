@@ -27,7 +27,7 @@ if __name__ == "__main__":
     save_name = args.save
     
     average_over_grid_shift = True
-    n_sample = 100 if np.any(['snr' in s for s in include_sources]) else 1
+    n_sample = 300 if np.any(['snr' in s for s in include_sources]) else 1
 
     g_arr_samples = np.zeros((pc.n_ra_shift, pc.n_dec_shift, n_sample, pc.n_nu))
 

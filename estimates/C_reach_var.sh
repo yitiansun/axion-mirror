@@ -9,10 +9,10 @@ VAR_FLAGS=("ti1" "tf30" "tf300")
 VAR_FLAGS_GYONLY=("srlow" "srhigh")
 
 for VAR_FLAG in "${VAR_FLAGS[@]}"; do
-    # echo "reach snrf-$VAR_FLAG"
-    # python reach.py	--config $CONFIG --src snr-fullinfo-$VAR_FLAG --save snrf-$VAR_FLAG
-    # echo "reach snrp-$VAR_FLAG"
-    # python reach.py	--config $CONFIG --src snr-partialinfo-$VAR_FLAG --save snrp-$VAR_FLAG
+    echo "reach snrf-$VAR_FLAG"
+    python reach.py	--config $CONFIG --src snr-fullinfo-$VAR_FLAG --save snrf-$VAR_FLAG
+    echo "reach snrp-$VAR_FLAG"
+    python reach.py	--config $CONFIG --src snr-partialinfo-$VAR_FLAG --save snrp-$VAR_FLAG
     echo "reach snro-$VAR_FLAG"
     python reach.py	--config $CONFIG --src snr-obs-$VAR_FLAG --save snro-$VAR_FLAG
     echo "reach snrg-$VAR_FLAG"
@@ -34,4 +34,4 @@ for VAR_FLAG in "${VAR_FLAGS_GYONLY[@]}"; do
     python reach.py	--config $CONFIG --src egrs gsr snr-obs-base snr-graveyard-$VAR_FLAG --save total-$VAR_FLAG
 done
 
-echo 'reach complete!'
+echo 'reach var complete!'

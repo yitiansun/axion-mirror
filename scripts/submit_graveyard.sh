@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=populate_graveyard
-#SBATCH --array=10
-#SBATCH --partition=gpu_mig
+#SBATCH --job-name=pg_srhigh
+#SBATCH --array=13
+#SBATCH --partition=iaifi_gpu_mig
 #SBATCH --mem=16G
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
@@ -20,4 +20,6 @@ cd /n/home07/yitians/all_sky_gegenschein/axion-mirror/scripts
 ISTART=$((SLURM_ARRAY_TASK_ID*10))
 IEND=$((SLURM_ARRAY_TASK_ID*10+10)) # end excluded
 
-srun python populate_graveyard.py --var base --istart $ISTART --iend $IEND
+srun python populate_graveyard.py --var srhigh --istart $ISTART --iend $IEND
+
+echo "Complete!"

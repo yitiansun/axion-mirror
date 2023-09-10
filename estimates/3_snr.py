@@ -20,7 +20,7 @@ def snr(pc, snr_pop=..., snr_list_samples=..., var_flag=...):
     #===== settings =====
     n_sigma = 4 # size of SNR image added to map
     use_gaussian_intg = False
-    Sgfgnu1GHz_threshold = 1e-8 # [Jy]
+    Sgfgnu1GHz_threshold = 1e-7 # [Jy]
 
     #===== add snr to map =====
     sig_temp_map_snr_samples = []
@@ -83,9 +83,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     pc = pc_dict[args.config]
+    n_samples = 300
     
     snr_list_samples = []
-    for i_sample in tqdm(range(100)):
+    for i_sample in tqdm(range(n_samples)):
         snr_list_samples.append(
             load_snr_list(f"../outputs/snr/{args.pop}_samples_{args.var}/{args.pop}_{i_sample}.json")
         )
