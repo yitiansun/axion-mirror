@@ -7,22 +7,20 @@
 |-----------------|-------|-------|-------|-------|----------|-----------|-----------|------------|
 | egrs (A1)       |   -   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
 | gsr  (A1)       |   -   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
-| snrf (A1)       |   X   |   X   |   X   |   X   |    X     |           |     X     |            |
-| snrp (A1)       |   X   |   X   |   X   |   X   |    X     |           |     X     |            |
-| snrg (A1)       |   X   |   X   |   X   |   X   |    X     |           |     X     |            |
-| snro (A2)       |   -   |   X   |   X   |   X   |    X     |           |     X     |            |
-| reach base (B1) |   -   |   X   |   X   |   X   |    X     |           |     X     |            |
-| reach var (B2)  |   -   |   X   |   X   |   X   |    X     |           |           |            |
-| snrfnf (A3)     |       |       |       |       |          |           |           |            |
-| reach fnf (A3)  |       |       |       |       |          |           |           |            |
+| snrf (A1)       |   X   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
+| snrp (A1)       |   X   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
+| snrg (A1)       |   X   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
+| snro (A2)       |   -   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
+| reach base (B1) |   -   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
+| reach var (B2)  |   -   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
 
 - B: base
 - E: ti - time index / electron model
 - T: tf - t_free
 - R: sr - snr rate
+- F: nofree - no lightcurve in free expansion phase
 
 - f = fullinfo : BET
 - p = partialinfo : BET
 - o = observed = f+p : BET
 - g = graveyard : BETR
-- fnf = fullinfo no free expansion

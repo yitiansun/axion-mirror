@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SBATCH --array=5
-#SBATCH --partition=shared
+#SBATCH --array=0-5
+#SBATCH --partition=gpu_mig
 #SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --time=0-23:00:00

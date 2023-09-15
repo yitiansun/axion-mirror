@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --partition=iaifi_gpu_mig
+#SBATCH --partition=gpu_mig
 #SBATCH --mem=16G
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
