@@ -18,6 +18,6 @@ echo '1_egrs:'
 python 1_egrs.py --config $TELESCOPE
 
 echo '2_gsr:'
-python 2_gsr.py	--config $TELESCOPE
+python 2_gsr.py	--config $TELESCOPE --field_model JF
 
 echo 'complete!'

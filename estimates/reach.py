@@ -18,13 +18,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, required=True, help='config')
-    parser.add_argument('--src', nargs='+', required=True, help='subset of [egrs, gsr, snr-fullinfo-var, snr-partialinfo-var, snr-graveyard-var, snr-obs-var]')
-    parser.add_argument('--save', type=str, required=True, help='save name')
+    parser.add_argument('--source', nargs='+', required=True, help='subset of [egrs, gsrXX, snr-fullinfo-var, snr-partialinfo-var, snr-graveyard-var, snr-obs-var]')
+    parser.add_argument('--save_name', type=str, required=True, help='save name')
     args = parser.parse_args()
 
     pc = pc_dict[args.config]
-    include_sources = args.src
-    save_name = args.save
+    include_sources = args.source
+    save_name = args.save_name
     
     average_over_grid_shift = True
     n_sample = 300 if np.any(['snr' in s for s in include_sources]) else 1
@@ -42,15 +42,12 @@ if __name__ == "__main__":
                 bkg = np.load(f'{pc.save_dir}/bkg/bkg-{pc.postfix}.npy')[np.newaxis, ...]
                 exposure = pc.exposure_map[np.newaxis, ...]
                 sig_samples = np.zeros((n_sample,) + bkg.shape[1:]) # (sample, dec, ra)
-                
-                if 'gsr' in include_sources:
-                    sig_samples += np.load(f'{pc.save_dir}/gsrJF/gsrJF-{pc.postfix}.npy')[np.newaxis, ...]
-                    
-                if 'egrs' in include_sources:
-                    sig_samples += np.load(f'{pc.save_dir}/egrs/egrs-{pc.postfix}.npy')[np.newaxis, ...]
 
-                for snr_pop in [s for s in include_sources if s.startswith('snr')]:
-                    sig_samples += np.load(f'{pc.save_dir}/{snr_pop}/{snr_pop}-{pc.postfix}.npy')
+                for source in include_sources:
+                    sig_source = np.load(f'{pc.save_dir}/{source}/{source}-{pc.postfix}.npy')
+                    if 'egrs' in source or 'gsr' in source:
+                        sig_source = np.expand_dims(sig_source, axis=0) # (1, dec, ra)
+                    sig_samples += sig_source
                 
                 snratio_samples_map = (sig_samples / bkg) * np.sqrt(
                     pc.telescope.n_pol * dnu(pc.nu) * 1e6 * exposure

@@ -38,9 +38,6 @@ def gsr(pc, field_model=...):
     l_grid_zc = jnp.where(pc.l_grid > np.pi, pc.l_grid - 2*np.pi, pc.l_grid) # zero centered
     bl_flat = jnp.stack([pc.b_grid.ravel(), l_grid_zc.ravel()], axis=-1)
     
-    if field_model != 'JF':
-        raise NotImplementedError(field_model)
-    
     with h5py.File(f"../outputs/gsr/Ta_408MHz_field{field_model}.h5") as hf: # Ta: signal temperature for all
         padded_Ta, padded_b, padded_l = pad_mbl(hf['Ta'][:], hf['b_s'][:], hf['l_s'][:])
     
@@ -85,7 +82,8 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, required=True, help='config')
+    parser.add_argument('--field_model', type=str, required=True, help='field model')
     args = parser.parse_args()
     
     pc = pc_dict[args.config]
-    pc.iter_over_func(gsr, field_model='JF')
+    pc.iter_over_func(gsr, field_model=args.field_model)

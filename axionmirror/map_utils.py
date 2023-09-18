@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 
 #===== map functions =====
 
-# def antipodal_map(m):
-#     """Antipodal map of a map with dimensions (~b, ~l)."""
-#     return jnp.roll(jnp.flipud(m), int(m.shape[1]/2), axis=1)
+def antipodal_map(m):
+    """Antipodal map of a map with dimensions (~b, ~l). Works only with full sky cartesian maps!"""
+    return jnp.roll(jnp.flipud(m), int(m.shape[1]/2), axis=1)
 
 
 def interpolate_padded(m, l, b, lb_s):
