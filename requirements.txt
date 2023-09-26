@@ -1,0 +1,11 @@
+astropy
+beautifulsoup4
+h5py
+healpy
+jax==0.4.14
+jaxlib
+matplotlib
+numpy
+pandas
+scipy
+tqdm
