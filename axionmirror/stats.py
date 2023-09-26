@@ -2,7 +2,6 @@
 
 import numpy as np
 from scipy import interpolate
-
 import jax
 import jax.numpy as jnp
 from jax import vmap

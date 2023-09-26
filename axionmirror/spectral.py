@@ -1,16 +1,16 @@
 """Functions for spectrum"""
 
 import sys
-sys.path.append("..")
 
-from axionmirror.units_constants import hbar, c0, sigmad_over_c, gagg_CAST
+sys.path.append("..")
+from axionmirror import units_constants as uc
 
 
 fDelta = 0.721 # frequency domain cut associated with the above bandwidth (2.17)
 
 def dnu(nu):
     """[MHz]([MHz]). Input can be a vector."""
-    return 2.17 * sigmad_over_c * nu
+    return 2.17 * uc.sigmad_over_c * nu
 
 
 def prefac(nu):
@@ -20,4 +20,4 @@ def prefac(nu):
     Note that since integral of rho ~ [g cm^-2], the product is ~ [1].
     Input can be a vector.
     """
-    return (fDelta/dnu(nu)) * hbar * c0**4 * gagg_CAST**2 / 16
+    return (fDelta/dnu(nu)) * uc.hbar * uc.c0**4 * uc.gagg_CAST**2 / 16

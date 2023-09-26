@@ -1,6 +1,7 @@
+"""Math functions."""
+
 import numpy as np
 
-EPSILON = 1e-5
 
 def left_geom_trapz(func, start, end, n_points=1000, offset=1):
     """Fine grained near start. Assumes start < end, vectorized func."""

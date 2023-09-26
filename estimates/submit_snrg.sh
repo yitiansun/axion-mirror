@@ -2,6 +2,7 @@
 
 #SBATCH --array=0-5
 #SBATCH --partition=gpu_mig
+#SBATCH --gres=gpu:1
 #SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --time=0-23:00:00
@@ -21,5 +22,3 @@ echo $TELESCOPE "graveyard" $VAR_FLAG
 python 3_snr.py --config $TELESCOPE --pop graveyard --var $VAR_FLAG
 
 echo 'complete!'
-
-#SBATCH --gres=gpu:1

@@ -214,6 +214,7 @@ def concat_with_exclusion(egrs_list_1, egrs_list_2, exclude_radius=np.deg2rad(1.
 
     return egrs_list
 
+
 def egrs_list_all():
     egrs_list = concat_with_exclusion(egrs_list_keuhr(), egrs_list_cora())
     return egrs_list

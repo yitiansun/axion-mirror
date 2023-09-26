@@ -6,13 +6,13 @@ Units:
 """
 
 import sys
-sys.path.append("..")
 
 import jax.numpy as jnp
 from jax import vmap
 from functools import partial
 
-from axionmirror.units_constants import *
+sys.path.append("..")
+from axionmirror import units_constants as uc
 
 
 #===== spectral indices =====
@@ -183,4 +183,4 @@ def n_e_SRWE(stz_s):
     """
     s, t, z = stz_s[:,0], stz_s[:,1], stz_s[:,2]
     return jnp.where(jnp.abs(z)>1, 0.0,
-                     jnp.exp(-(jnp.maximum(s,3)-r_Sun)/8-jnp.abs(z)))
+                     jnp.exp(-(jnp.maximum(s,3)-uc.r_Sun)/8-jnp.abs(z)))

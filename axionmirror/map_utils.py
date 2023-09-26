@@ -1,8 +1,6 @@
 """Utilities for creating map plots"""
 
 import numpy as np
-from scipy import interpolate
-
 import jax.numpy as jnp
 from jax import jit, vmap
 
@@ -15,6 +13,31 @@ import matplotlib.pyplot as plt
 def antipodal_map(m):
     """Antipodal map of a map with dimensions (~b, ~l). Works only with full sky cartesian maps!"""
     return jnp.roll(jnp.flipud(m), int(m.shape[1]/2), axis=1)
+
+
+def interp2d(f, x0, x1, xv):
+    """Interpolates f(x) at values in xvs. Does not do bound checks.
+    f : (n>=2 D) array of function value.
+    x0 : 1D array of input value, corresponding to axis 0 of f.
+    x1 : 1D array of input value, corresponding to axis 1 of f.
+    xv : [x0, x1] values to interpolate.
+    """
+    xv0, xv1 = xv
+    
+    li0 = jnp.searchsorted(x0, xv0) - 1
+    lx0 = x0[li0]
+    rx0 = x0[li0+1]
+    p0 = (xv0-lx0) / (rx0-lx0)
+    
+    li1 = jnp.searchsorted(x1, xv1) - 1
+    lx1 = x1[li1]
+    rx1 = x1[li1+1]
+    p1 = (xv1-lx1) / (rx1-lx1)
+    
+    fll = f[li0,li1]
+    return fll + (f[li0+1,li1]-fll)*p0 + (f[li0,li1+1]-fll)*p1
+
+interp2d_vmap = jit(vmap(interp2d, in_axes=(None, None, None, 0)))
 
 
 def interpolate_padded(m, l, b, lb_s):
@@ -42,31 +65,6 @@ def interpolate_padded(m, l, b, lb_s):
         jnp.asarray(padded_b),
         lb_s
     )
-
-
-def interp2d(f, x0, x1, xv):
-    """Interpolates f(x) at values in xvs. Does not do bound checks.
-    f : (n>=2 D) array of function value.
-    x0 : 1D array of input value, corresponding to axis 0 of f.
-    x1 : 1D array of input value, corresponding to axis 1 of f.
-    xv : [x0, x1] values to interpolate.
-    """
-    xv0, xv1 = xv
-    
-    li0 = jnp.searchsorted(x0, xv0) - 1
-    lx0 = x0[li0]
-    rx0 = x0[li0+1]
-    p0 = (xv0-lx0) / (rx0-lx0)
-    
-    li1 = jnp.searchsorted(x1, xv1) - 1
-    lx1 = x1[li1]
-    rx1 = x1[li1+1]
-    p1 = (xv1-lx1) / (rx1-lx1)
-    
-    fll = f[li0,li1]
-    return fll + (f[li0+1,li1]-fll)*p0 + (f[li0,li1+1]-fll)*p1
-
-interp2d_vmap = jit(vmap(interp2d, in_axes=(None, None, None, 0)))
 
 
 def pad_mbl(m, b, l, method='nearest'):

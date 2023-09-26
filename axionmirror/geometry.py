@@ -1,28 +1,11 @@
 """Geometry utilities"""
 
 import sys
-sys.path.append('..')
-
-from astropy.coordinates import SkyCoord
-from astropy import units as u
 
 import jax.numpy as jnp
-from jax import jit, vmap
 
-from axionmirror.units_constants import *
-
-
-#===== constants =====
-
-EPSILON = 1e-30
-
-c_NGP = SkyCoord(l=0*u.deg, b=90*u.deg, frame='galactic') # north galactic pole
-c_NCP = SkyCoord(ra=0*u.deg, dec=90*u.deg, frame='icrs') # north celestial pole
-
-ra_NGP = float(c_NGP.icrs.ra/u.rad)
-dec_NGP = float(c_NGP.icrs.dec/u.rad)
-l_NCP = float(c_NCP.galactic.l/u.rad)
-b_NCP = float(c_NCP.galactic.b/u.rad)
+sys.path.append('..')
+from axionmirror import units_constants as uc
 
 
 #===== geometry =====
@@ -53,7 +36,7 @@ def Gr(lbd):
     the first dimension.
     """
     l, b, d = lbd[:, 0], lbd[:, 1], lbd[:, 2]
-    x = d * jnp.cos(b) * jnp.cos(l) - r_Sun
+    x = d * jnp.cos(b) * jnp.cos(l) - uc.r_Sun
     y = d * jnp.cos(b) * jnp.sin(l)
     z = d * jnp.sin(b)
     return jnp.sqrt(x**2 + y**2 + z**2)
@@ -65,7 +48,7 @@ def GCstz(lbd):
     ; batch dimension is the first dimension.
     """
     l, b, d = lbd[:,0], lbd[:,1], lbd[:,2]
-    x = d * jnp.cos(b) * jnp.cos(l) - r_Sun
+    x = d * jnp.cos(b) * jnp.cos(l) - uc.r_Sun
     y = d * jnp.cos(b) * jnp.sin(l)
     z = d * jnp.sin(b)
     return jnp.stack([jnp.sqrt(x**2 + y**2),
@@ -82,9 +65,9 @@ def Glbd(stz):
     x = s * jnp.cos(t)
     y = s * jnp.sin(t)
     # z = z
-    return jnp.stack([jnp.arctan2(y, x+r_Sun),
-                      jnp.arctan2(z, jnp.sqrt((x+r_Sun)**2 + y**2)),
-                      jnp.sqrt((x+r_Sun)**2 + y**2 + z**2)], axis=-1)
+    return jnp.stack([jnp.arctan2(y, x+uc.r_Sun),
+                      jnp.arctan2(z, jnp.sqrt((x+uc.r_Sun)**2 + y**2)),
+                      jnp.sqrt((x+uc.r_Sun)**2 + y**2 + z**2)], axis=-1)
 
 
 def GCxyz_stz(stz):
@@ -117,7 +100,7 @@ def LOS_direction(xyz):
     dimension.
     """
     x, y, z = xyz[:,0], xyz[:,1], xyz[:,2]
-    return unit_vec(jnp.stack([x+r_Sun, y, z], axis=-1))
+    return unit_vec(jnp.stack([x+uc.r_Sun, y, z], axis=-1))
 
 
 def vstz2vxyz_stz(vstz, stz):
@@ -138,9 +121,9 @@ def lb2radec(lb):
     dimension.
     """
     l, b = lb[:,0], lb[:,1]
-    dec = jnp.arcsin( jnp.sin(dec_NGP)*jnp.sin(b) 
-                      + jnp.cos(dec_NGP)*jnp.cos(b)*jnp.cos(l_NCP-l) )
-    ra = jnp.arcsin( jnp.cos(b)*jnp.sin(l_NCP-l)/(jnp.cos(dec)+EPSILON) ) + ra_NGP
+    dec = jnp.arcsin( jnp.sin(uc.dec_NGP)*jnp.sin(b) 
+                      + jnp.cos(uc.dec_NGP)*jnp.cos(b)*jnp.cos(uc.l_NCP-l) )
+    ra = jnp.arcsin( jnp.cos(b)*jnp.sin(uc.l_NCP-l)/(jnp.cos(dec)+uc.EPSILON) ) + uc.ra_NGP
     return jnp.stack([ra, dec], axis=-1)
 
 
@@ -150,7 +133,7 @@ def radec2lb(radec):
     dimension.
     """
     ra, dec = radec[:,0], radec[:,1]
-    b = jnp.arcsin( jnp.sin(dec_NGP)*jnp.sin(dec) 
-                    + jnp.cos(dec_NGP)*jnp.cos(dec)*jnp.cos(ra-ra_NGP) )
-    l = - jnp.arcsin( jnp.cos(dec)*jnp.sin(ra-ra_NGP)/(jnp.cos(b)+EPSILON) ) + l_NCP
+    b = jnp.arcsin( jnp.sin(uc.dec_NGP)*jnp.sin(dec) 
+                    + jnp.cos(uc.dec_NGP)*jnp.cos(dec)*jnp.cos(ra-uc.ra_NGP) )
+    l = - jnp.arcsin( jnp.cos(dec)*jnp.sin(ra-uc.ra_NGP)/(jnp.cos(b)+uc.EPSILON) ) + uc.l_NCP
     return jnp.stack([l, b], axis=-1)

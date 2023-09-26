@@ -1,26 +1,8 @@
-# Axion mirror
+# Axion mirror - an all-sky analysis of stimulated decay
 
 ![](outputs/graveyard_samples.gif)
 
-## Run status
-|                 |  src  | CHIME | CHORD | HERA  | HIRAX256 | HIRAX1024 | BURSTT256 | BURSTT2048 |
-|-----------------|-------|-------|-------|-------|----------|-----------|-----------|------------|
-| egrs (A1)       |   -   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
-| gsr  (A1)       |   -   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
-| snrf (A1)       |   X   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
-| snrp (A1)       |   X   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
-| snrg (A1)       |   X   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
-| snro (A2)       |   -   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
-| reach base (B1) |   -   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
-| reach var (B2)  |   -   |   X   |   X   |   X   |    X     |     X     |     X     |     X      |
+Analysis code used in this work: [Looking in the axion mirror: An all-sky analysis of stimulated decay](https://arxiv.org/abs/2310.XXXXX).
 
-- B: base
-- E: ti - time index / electron model
-- T: tf - t_free
-- R: sr - snr rate
-- F: nofree - no lightcurve in free expansion phase
-
-- f = fullinfo : BET
-- p = partialinfo : BET
-- o = observed = f+p : BET
-- g = graveyard : BETR
+## Authors
+Yitian Sun, Katelin Schutz, Harper Sewalls, Calvin Leung, and Kiyoshi Masui

@@ -1,6 +1,5 @@
 """Class for pixel grids in one sensitivity scan."""
 
-import sys
 from functools import partial
 from tqdm import tqdm
 

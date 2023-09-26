@@ -10,9 +10,9 @@ from astropy.coordinates import SkyCoord
 import jax.numpy as jnp
 
 sys.path.append("..")
-from axionmirror.units_constants import *
-from axionmirror.spectral import *
-from axionmirror.math import left_geom_trapz, right_geom_trapz
+from axionmirror import units_constants as uc
+from axionmirror.spectral import prefac
+from axionmirror.math import right_geom_trapz
 from axionmirror.nfw import rho_NFW
 
 
@@ -22,7 +22,6 @@ def gaussian_val(sigma, x0, y0, x, y):
     """x, y can take any shape. Use np to be variable."""
     return np.exp( -((x-x0)**2+(y-y0)**2)/(2*sigma**2) )
 
-#@jit
 def gaussian_integral_estimate(x0, y0, sigma,
                                x_range, y_range, sample_n=(10, 10)):
     """Rough estimate of 2D gaussian integral in rectangles by sampling points
@@ -89,7 +88,6 @@ def add_image_to_map(fullmap, ra_s, dec_s, ra_edges, dec_edges, pixel_area_map,
         else:
             tmpl = gaussian_val(image_sigma, source_ra, source_dec, ra_subgrid, dec_subgrid)
     pixel_area_submap = pixel_area_map[i_dec_st:i_dec_ed, i_ra_st:i_ra_ed]
-    #tmpl = np.array(tmpl) * np.cos(dec_s[i_dec_st:i_dec_ed])[:,None]
     tmpl = np.array(tmpl) * pixel_area_submap
     tmpl /= np.sum(tmpl)
 
@@ -222,26 +220,26 @@ class SNR:
                 return integrate.quad(*args)[0]
         elif self.integrate_method == 'trapz':
             def integrator(*args):
-                return right_geom_trapz(*args, offset=0.01*c0_kpc_yr) # [0.01 yr]
+                return right_geom_trapz(*args, offset=0.01*uc.c0_kpc_yr) # [0.01 yr]
         else:
             raise NotImplementedError(self.integrate_method)
             
         self.nu_ref = 1000. # [MHz]
         
         #========== gegenschein & front gegenschein ==========
-        intgd = lambda xp: self.Snu_t(self.nu_ref, self.t(xp)) * rho_DM(np.maximum(self.Gr(xp), 1e-3)) * kpc
+        intgd = lambda xp: self.Snu_t(self.nu_ref, self.t(xp)) * rho_DM(np.maximum(self.Gr(xp), 1e-3)) * uc.kpc
         # converted intgd*dx from [Jy g/cm^3 kpc] to [Jy g/cm^3 cm] to bring numerical value closer to 1
         intg = integrator(intgd, 0, self.xp(0)-EPSILON) # [Jy g/cm^2]
         self.Sgnu_ref = prefac(self.nu_ref) * intg # = [g^-1 cm^2] [Jy g cm^-2] = [Jy]
-        imsz_intgd = lambda xp: self.image_sigma_at(xp) * self.Snu_t(self.nu_ref, self.t(xp)) * rho_DM(self.Gr(xp)) * kpc
+        imsz_intgd = lambda xp: self.image_sigma_at(xp) * self.Snu_t(self.nu_ref, self.t(xp)) * rho_DM(self.Gr(xp)) * uc.kpc
         imsz_intg = integrator(imsz_intgd, 0, self.xp(0)-EPSILON)
         self.image_sigma = imsz_intg/intg # [arcmin]
 
-        intgd = lambda xp: self.Snu_t(self.nu_ref, self.t_fg(xp)) * rho_DM(np.maximum(self.Gr_fg(xp), 1e-3)) * kpc
+        intgd = lambda xp: self.Snu_t(self.nu_ref, self.t_fg(xp)) * rho_DM(np.maximum(self.Gr_fg(xp), 1e-3)) * uc.kpc
         # converted intgd*dx from [Jy g/cm^3 kpc] to [Jy g/cm^3 cm] to bring numerical value closer to 1
         intg = integrator(intgd, self.d, self.xp_fg(0)-EPSILON) # [Jy g/cm^2]
         self.Sfgnu_ref = prefac(self.nu_ref) * intg # = [g^-1 cm^2] [Jy g cm^-2] = [Jy]
-        imsz_intgd = lambda xp: self.image_sigma_at_fg(xp) * self.Snu_t(self.nu_ref, self.t_fg(xp)) * rho_DM(self.Gr_fg(xp)) * kpc
+        imsz_intgd = lambda xp: self.image_sigma_at_fg(xp) * self.Snu_t(self.nu_ref, self.t_fg(xp)) * rho_DM(self.Gr_fg(xp)) * uc.kpc
         imsz_intg = integrator(imsz_intgd, self.d, self.xp_fg(0)-EPSILON)
         self.image_sigma_fg = imsz_intg/intg # [arcmin]
         
@@ -266,39 +264,39 @@ class SNR:
         
     def xp(self, t):
         """x' (x_d) [kpc] as a function of SNR t [yr] (can be a vector)."""
-        return c0_kpc_yr * (self.t_now-t) / 2
+        return uc.c0_kpc_yr * (self.t_now-t) / 2
     
     def xp_fg(self, t):
         """x' (x_d) [kpc] as a function of SNR t [yr] (can be a vector).
         Front gegenschein."""
-        return c0_kpc_yr * (self.t_now-t) / 2 + self.d
+        return uc.c0_kpc_yr * (self.t_now-t) / 2 + self.d
     
     def t(self, xp):
         """SNR t [yr] as a function of x' (x_d) [kpc] (can be a vector)."""
-        return self.t_now - 2*xp/c0_kpc_yr
+        return self.t_now - 2*xp/uc.c0_kpc_yr
     
     def t_fg(self, xp):
         """SNR t [yr] as a function of x' (x_d) [kpc] (can be a vector).
         Front gegenschein."""
-        return self.t_now - 2*(xp - self.d)/c0_kpc_yr
+        return self.t_now - 2*(xp - self.d)/uc.c0_kpc_yr
     
     def blur_sigma(self, xp):
         """Blur sigma [rad] as a function of x' (x_d) [kpc] (can be a vector)."""
-        return (1 + xp/self.d) * 2 * sigmad_over_c
+        return (1 + xp/self.d) * 2 * uc.sigmad_over_c
     
     def blur_sigma_fg(self, xp):
         """Blur sigma [rad] as a function of x' (x_d) [kpc] (can be a vector).
         Front gegenschein."""
-        return (xp/self.d - 1) * 2 * sigmad_over_c
+        return (xp/self.d - 1) * 2 * uc.sigmad_over_c
     
     def Gr(self, xp):
         """Distance to GC [kpc] as a function of x' (x_d) [kpc] (can be a vector)."""
-        return np.sqrt(xp**2 + r_Sun**2 - 2*r_Sun*xp*np.cos(self.thetaGCCS))
+        return np.sqrt(xp**2 + uc.r_Sun**2 - 2*uc.r_Sun*xp*np.cos(self.thetaGCCS))
     
     def Gr_fg(self, xp):
         """Distance to GC [kpc] as a function of x' (x_d) [kpc] (can be a vector).
         Front gegenschein."""
-        return np.sqrt(xp**2 + r_Sun**2 - 2*r_Sun*xp*np.cos(self.thetaGCS))
+        return np.sqrt(xp**2 + uc.r_Sun**2 - 2*uc.r_Sun*xp*np.cos(self.thetaGCS))
     
     def image_sigma_at(self, xp):
         """Gegenschein image sigma [rad] as a function of x' (x_d) [kpc]
@@ -346,7 +344,7 @@ class SNR:
         
     def L_t(self, nu, t):
         """Luminosity [erg/s/Hz] as a function of frequency nu [MHz] and time t [yr]. Vectorized in t."""
-        return 4*np.pi * (self.d*kpc)**2 * self.Snu_t(nu, t) * Jy * sec**2
+        return 4*np.pi * (self.d*uc.kpc)**2 * self.Snu_t(nu, t) * uc.Jy * uc.sec**2
         
     def Sgnu(self, nu):
         """Gegenschein flux [Jy] as a function of frequency nu [MHz]."""

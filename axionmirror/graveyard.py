@@ -11,7 +11,7 @@ from jax import jit, vmap
 from functools import partial
 
 sys.path.append("..")
-from axionmirror.units_constants import *
+from axionmirror import units_constants as uc
 from axionmirror.geometry import Glbd, GCstz, GCxyz_stz
 from axionmirror.stats import sample_from_pdf, sample_from_pdf_jax, poisson_process
 from axionmirror.nfw import rho_NFW
@@ -214,7 +214,7 @@ def sample_t_pk_L_pk(snr, tiop='2', num_samples=1):
         Snu1GHz_t_free = snr.Snu1GHz * (snr.t_now/snr.t_free)**(-ti)
         Snu1GHz_pk = Snu1GHz_t_free / lightcurve_scale(t_pk, snr.t_free)
         Snu6p3GHz_pk = Snu1GHz_pk * (6.3/1)**(-snr.si)
-        L_pk = 4*np.pi * (snr.d*kpc)**2 * Snu6p3GHz_pk * Jy * sec**2
+        L_pk = 4*np.pi * (snr.d*uc.kpc)**2 * Snu6p3GHz_pk * uc.Jy * uc.sec**2
         return L_pk
 
     def conditioned_log10_t_pk_pdf(log10_t_pk):
@@ -225,7 +225,7 @@ def sample_t_pk_L_pk(snr, tiop='2', num_samples=1):
 
 def sample_Snu1GHz_pk(num_samples=1, si=..., d=...):
     """d in [kpc]. d and si can be vectors."""
-    Snu6p3GHz_pk = sample_L_pk(num_samples) / (4*np.pi*(d*kpc)**2) / sec**2 / Jy # [Jy]
+    Snu6p3GHz_pk = sample_L_pk(num_samples) / (4*np.pi*(d*uc.kpc)**2) / uc.sec**2 / uc.Jy # [Jy]
     return Snu6p3GHz_pk * np.sqrt(4*10) ** si
     
     
@@ -237,11 +237,6 @@ def sample_t_now(num_samples=1):
 
 
 #===== t_free =====
-
-# def sample_t_free(num_samples=1):
-#     """See ../notebooks/snr_graveyard.ipynb"""
-#     t_free_skewness, t_free_loc, t_free_scale = -0.4409101842885288, 2.322143632416538, 0.8307012289498359
-#     return 10**stats.skewnorm.rvs(t_free_skewness, loc=t_free_loc, scale=t_free_scale, size=num_samples)
 
 def fixed_t_free(value='est'):
     """[yr]"""

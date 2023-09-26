@@ -360,6 +360,9 @@ BURSTT2048 = AntennaArray(
     n_pol = 1,
 )
 
+
+#===== telescopes for simple estimates =====
+
 PUMA5k = Telescope(
     name = 'PUMA5k',
     nu_min = 200, nu_max = 1100,
