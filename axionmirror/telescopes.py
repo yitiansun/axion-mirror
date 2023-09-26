@@ -158,7 +158,7 @@ class Telescope:
         return self.Aeff_zenith(nu) * self.instantaneous_fov(nu)
     
     def merit(self, nu):
-        """Figure of merit [arbitrary]."""
+        """Figure of merit [arbitrary]. Ignores frequency scaling for now."""
         return np.sqrt(self.n_pol * self.eff_etendue(nu))
     
     def sens_estimate(self, nu_s):
@@ -358,4 +358,72 @@ BURSTT2048 = AntennaArray(
     T_rec_raw = 30.,
     t_obs_days = 5 * 365.25,
     n_pol = 1,
+)
+
+PUMA5k = Telescope(
+    name = 'PUMA5k',
+    nu_min = 200, nu_max = 1100,
+    dec = None,
+    pointing = True,
+    survey_ra_max = 2*np.pi, survey_ra_min = 0.,
+    fixed_survey_za_max = None,
+    size_ra = 71 * 6 * 100, size_dec = 71 * 6 * 100,
+    eta_f_ra = np.sqrt(np.pi/4), eta_f_dec = np.sqrt(np.pi/4),
+    eta_a_ra = 1., eta_a_dec = 1.,
+    primary_beam_baseline_ra = 6 * 100, primary_beam_baseline_dec = 6 * 100,
+    eta_sig = None,
+    T_rec_raw = None,
+    t_obs_days = 5 * 365.25,
+    n_pol = 2,
+)
+
+PUMA5kC = Telescope(
+    name = 'PUMA5kC',
+    nu_min = 200, nu_max = 1100,
+    dec = None,
+    pointing = True,
+    survey_ra_max = 2*np.pi, survey_ra_min = 0.,
+    fixed_survey_za_max = None,
+    size_ra = 376 * 100, size_dec = 376 * 100,
+    eta_f_ra = 1., eta_f_dec = 1.,
+    eta_a_ra = 1., eta_a_dec = 1.,
+    primary_beam_baseline_ra = 376 / np.sqrt(5000) * 100, primary_beam_baseline_dec = 376 / np.sqrt(5000) * 100,
+    eta_sig = None,
+    T_rec_raw = None,
+    t_obs_days = 5 * 365.25,
+    n_pol = 2,
+)
+
+PUMA32k = Telescope(
+    name = 'PUMA32k',
+    nu_min = 200, nu_max = 1100,
+    dec = None,
+    pointing = True,
+    survey_ra_max = 2*np.pi, survey_ra_min = 0.,
+    fixed_survey_za_max = None,
+    size_ra = 179 * 6 * 100, size_dec = 179 * 6 * 100,
+    eta_f_ra = np.sqrt(np.pi/4), eta_f_dec = np.sqrt(np.pi/4),
+    eta_a_ra = 1., eta_a_dec = 1.,
+    primary_beam_baseline_ra = 6 * 100, primary_beam_baseline_dec = 6 * 100,
+    eta_sig = None,
+    T_rec_raw = None,
+    t_obs_days = 5 * 365.25,
+    n_pol = 2,
+)
+
+FARSIDE = Telescope(
+    name = 'FARSIDE',
+    nu_min = 300, nu_max = 500,
+    dec = None,
+    pointing = True,
+    survey_ra_max = 2*np.pi, survey_ra_min = 0.,
+    fixed_survey_za_max = None,
+    size_ra = 1e5 * 100, size_dec = 1e5 * 100,
+    eta_f_ra = 1., eta_f_dec = 1.,
+    eta_a_ra = 1., eta_a_dec = 1.,
+    primary_beam_baseline_ra = 1e5/316 * 100, primary_beam_baseline_dec = 1e5/316 * 100,
+    eta_sig = None,
+    T_rec_raw = None,
+    t_obs_days = 5 * 365.25,
+    n_pol = 2,
 )
